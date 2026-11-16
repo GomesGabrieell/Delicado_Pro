@@ -2,6 +2,8 @@ node_modules/
 .expo/
 dist/
 dist-preview-fix/
+dist-cloudflare/
+.wrangler/
 android/
 ios/
 .env*

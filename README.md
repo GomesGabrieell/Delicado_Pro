@@ -222,3 +222,16 @@ O endereço do portal no Sites é `https://delicado-pro-propostas.gabriel-3218.c
 Cada emissão cria uma versão com conteúdo comercial congelado. As versões anteriores sem resposta perdem o link quando uma nova versão é emitida. A resposta não altera o estado do orçamento. O token fica no fragmento da URL, e o banco guarda seu hash. Imagens usam links assinados de curta duração. O PDF aceita até 12 MB de imagens em conjunto. A mensagem de agradecimento está em `public-proposal/proposal.js`. O prompt mestre disponível no repositório ainda não especifica seu texto.
 
 Execute `npx supabase test db` para validar emissão, segurança e respostas. A exportação do Expo verifica os bundles. Teste o envio pelo WhatsApp e o download do PDF em dispositivos após publicar a página e a função.
+
+## Publicação na Cloudflare Workers
+
+Com Node.js 24, rode os comandos abaixo a partir da raiz do projeto. O build lê a URL do Supabase e a chave publicável do ambiente ou do `.env`. O Wrangler publica o site comercial, o Portal do Cliente e o Expo Web na mesma origem.
+
+```powershell
+npm ci
+npm run cloudflare:build
+npx wrangler@4.163.0 login
+npx wrangler@4.163.0 deploy
+```
+
+Use `npx wrangler@4.163.0 dev` depois do build para conferir as rotas localmente. Antes de divulgar o endereço hospedado, adicione a URL de retorno `https://<origem>/orcamento.html` aos redirecionamentos do Supabase Auth e inclua a origem em `PROPOSAL_WEB_ORIGIN` quando a função `public-proposal` estiver publicada. Preserve as outras origens em uso. O catálogo e o portal dependem das migrações correspondentes no Supabase, que devem ser avaliadas e aplicadas separadamente.

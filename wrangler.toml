@@ -1,0 +1,6 @@
+name = "delicado-pro"
+compatibility_date = "2026-11-16"
+
+[assets]
+directory = "./dist-cloudflare"
+html_handling = "none"

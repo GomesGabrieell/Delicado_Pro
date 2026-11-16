@@ -1,0 +1,21 @@
+/*
+  Referrer-Policy: no-referrer
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+/proposta.html
+  Cache-Control: no-store
+  X-Robots-Tag: noindex, nofollow, noarchive
+/cliente*
+  Cache-Control: no-store
+  X-Robots-Tag: noindex, nofollow, noarchive
+/admin*
+  Cache-Control: no-store
+  X-Robots-Tag: noindex, nofollow, noarchive
+/login
+  Cache-Control: no-store
+/cadastro
+  Cache-Control: no-store
+/orcamento-config.js
+  Cache-Control: no-store
+/config.js
+  Cache-Control: no-store
