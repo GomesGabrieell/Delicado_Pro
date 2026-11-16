@@ -3,24 +3,21 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Linking, Platform, Share, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Linking, Platform, Share, Text, View } from 'react-native';
 
 import { Chip, Field, catalogStyles as styles } from '../catalog/controls';
 import { listCompanies } from '../catalog/repository';
 import type { Company } from '../catalog/model';
 import { ActionButton } from '../components/ActionButton';
 import { Screen } from '../components/Screen';
+import { ConfirmDialog, FilterChips, ListItem, LoadingState, SecondaryButton, StatusBadge } from '../design-system';
+import { brl } from '../calculator/finance';
 import { colors } from '../theme';
+import { decisions, listProposals, proposalDate as date, type ProposalRow as Row } from './repository';
+import { loadQuoteDetails, loadQuote, imageUrl, type Quote } from '../quotes/repository';
 
-type Row = {
-  id: string; version: number; content: { code: string; title: string; customer: string };
-  expires_at: string; revoked_at: string | null; decision: 'approved' | 'negotiate' | 'declined' | null;
-  wants_revision: boolean | null; responded_at: string | null; notification_read_at: string | null;
-};
 type Brand = { display_name: string; accent: string; whatsapp: string };
 type Target = { company: string; quote: string };
-const date = (value: string) => new Date(value).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
-const decisions = { approved: 'Aprovada pelo cliente', negotiate: 'Interesse em negociar', declined: 'Não aprovada' };
 const pageSize = 20;
 
 function publicLink(token: string) {
@@ -51,13 +48,40 @@ function CompanyProposals({ client, company, quote, back }: {
   const [checkedAt, setCheckedAt] = useState(Date.now);
   const [revision, setRevision] = useState(0);
   const [offset, setOffset] = useState(0);
+  const [latest, setLatest] = useState<Row>();
   const [unread, setUnread] = useState(!quote);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [issued, setIssued] = useState<{ token: string; id: string }>();
   const [confirmation, setConfirmation] = useState<'issue' | Row>();
+  const [tab, setTab] = useState('proposal');
+  const [details, setDetails] = useState<{ quote: Quote; images: string[] }>();
+  const [detailsError, setDetailsError] = useState('');
+  const [sourceStatus, setSourceStatus] = useState<Quote['status']>();
   const link = issued ? publicLink(issued.token) : '';
+
+  useFocusEffect(useCallback(() => {
+    if (!quote) return;
+    let active = true;
+    setSourceStatus(undefined);
+    void loadQuote(client, company.id, quote, false).then(({ quote: source }) => {
+      if (active) setSourceStatus(source.status);
+    }).catch((cause) => { if (active) setError(errorText(cause)); });
+    return () => { active = false; };
+  }, [client, company.id, quote]));
+
+  useFocusEffect(useCallback(() => {
+    if (!quote || tab !== 'details') return;
+    let active = true;
+    setDetails(undefined);
+    setDetailsError('');
+    void loadQuoteDetails(client, company.id, quote, false).then(async (data) => {
+      const images = await Promise.all(data.images.map(({ path }) => imageUrl(client, path).catch(() => '')));
+      if (active) setDetails({ quote: data.quote, images });
+    }).catch((cause) => { if (active) setDetailsError(errorText(cause)); });
+    return () => { active = false; };
+  }, [client, company.id, quote, tab]));
 
   useFocusEffect(useCallback(() => {
     let active = true;
@@ -78,16 +102,10 @@ function CompanyProposals({ client, company, quote, back }: {
       if (refreshing) return;
       refreshing = true;
       try {
-        let query = client.from('commercial_proposals')
-          .select('id,version,content,expires_at,revoked_at,decision,wants_revision,responded_at,notification_read_at')
-          .eq('company_id', company.id);
-        query = quote ? query.eq('quote_id', quote) : query.not('responded_at', 'is', null);
-        if (unread) query = query.is('notification_read_at', null);
-        const { data, error: cause } = await query.order(quote ? 'version' : 'responded_at', { ascending: false }).order('id')
-          .range(offset, offset + pageSize).returns<Row[]>();
+        const data = await listProposals(client, company.id, { quote, unread, offset, responses: !quote, limit: pageSize + 1 });
         if (!active) return;
-        if (cause) throw cause;
         setRows(data);
+        if (quote && offset === 0) setLatest(data[0]);
         setCheckedAt(Date.now());
       } catch (cause) {
         if (active) setError(errorText(cause));
@@ -159,7 +177,24 @@ function CompanyProposals({ client, company, quote, back }: {
   }
 
   return <Screen title={quote ? 'Proposta comercial' : 'Respostas de propostas'} description={company.name}>
-    <Chip label={brandOpen ? 'Fechar identidade' : 'Identidade comercial'} onPress={() => setBrandOpen(!brandOpen)} />
+    {quote && <FilterChips label="Seção da proposta" options={[
+      { id: 'proposal', label: 'Proposta' }, { id: 'details', label: 'Detalhes' }, { id: 'history', label: 'Histórico' },
+    ]} selected={tab} onSelect={setTab} />}
+    {quote && tab === 'details' && (detailsError ? <Text accessibilityRole="alert" style={styles.error}>{detailsError}</Text>
+      : !details ? <LoadingState label="Carregando detalhes…" /> : <>
+        <Text style={styles.title}>Dados do orçamento atual</Text>
+        <Text style={styles.text}>{details.quote.decoration}</Text>
+        <Text style={styles.text}>{details.quote.payment_terms}</Text>
+        {details.quote.items.map((item) => <ListItem key={item.id} title={item.name} detail={[item.quantity, item.unit].filter(Boolean).join(' ')} />)}
+        {details.images.map((uri, index) => uri
+          ? <Image key={uri} source={{ uri }} style={styles.photo} resizeMode="contain" accessibilityLabel={`Referência ${index + 1}`} />
+          : <Text key={index} style={styles.text}>Referência indisponível.</Text>)}
+      </>)}
+    {(!quote || tab === 'proposal') && <>
+    <View style={styles.row}>
+      <SecondaryButton label={brandOpen ? 'Fechar identidade' : 'Identidade comercial'} icon="edit-3"
+        onPress={() => setBrandOpen((current) => !current)} />
+    </View>
     {brandOpen && <View style={styles.card}>
       <Field label="Nome comercial" value={brand.display_name} onChangeText={(display_name) => setBrand({ ...brand, display_name })} />
       <Field label="Cor da marca (#RRGGBB)" maxLength={7} value={brand.accent} onChangeText={(accent) => setBrand({ ...brand, accent })} />
@@ -167,17 +202,29 @@ function CompanyProposals({ client, company, quote, back }: {
       <ActionButton label="Salvar identidade" disabled={busy} onPress={() => void run(saveBrand)} />
     </View>}
     {quote && <>
-      <Text style={styles.text}>A validade de dois dias começa ao emitir o link. Compartilhe-o com o cliente após a emissão.</Text>
-      <ActionButton label="Emitir proposta" disabled={busy || Boolean(confirmation)} onPress={() => setConfirmation('issue')} />
-      {confirmation === 'issue' && <View style={styles.card}>
-        <Text style={styles.text}>A emissão registra o envio e revoga links anteriores ainda sem resposta.</Text>
-        <ActionButton label="Confirmar emissão" onPress={() => { setConfirmation(undefined); void run(issue); }} />
-        <Chip label="Cancelar" onPress={() => setConfirmation(undefined)} />
+      {latest && <View style={styles.card}>
+        <Text style={styles.title}>{latest.content.customer}</Text>
+        <StatusBadge label={latest.decision ? decisions[latest.decision] : 'Aguardando resposta'}
+          tone={latest.decision === 'approved' ? 'positive' : latest.decision === 'declined' ? 'error' : 'warning'} />
+        <Text style={styles.text}>{latest.content.decoration}</Text>
+        {latest.content.total && /^\d+$/.test(latest.content.total) ? <Text style={styles.strong}>{brl(BigInt(latest.content.total))}</Text> : null}
+        <Text style={styles.text}>{latest.content.payment}</Text>
       </View>}
+      <Text style={styles.text}>A validade de dois dias começa ao emitir o link. Compartilhe-o com o cliente após a emissão.</Text>
+      {!publicLink('') ? <Text style={styles.text}>A emissão fica disponível quando a página pública estiver configurada.</Text>
+        : sourceStatus === 'ready' ? <ActionButton label="Emitir proposta" disabled={busy || Boolean(confirmation)} onPress={() => setConfirmation('issue')} />
+        : sourceStatus ? <Text style={styles.text}>Marque o orçamento como pronto para revisão para emitir a proposta.</Text>
+        : !error && <LoadingState label="Consultando estado do orçamento…" />}
+      <ConfirmDialog visible={confirmation === 'issue'} title="Emitir nova versão?"
+        description="A emissão revoga links anteriores ainda sem resposta." confirmLabel="Confirmar emissão"
+        onClose={() => setConfirmation(undefined)} onConfirm={() => { setConfirmation(undefined); void run(issue); }} />
       {link !== '' && <View style={styles.card}>
         <Text style={styles.title}>Link exclusivo</Text>
         <Text selectable style={styles.text}>{link}</Text>
         <Chip label="Abrir proposta" disabled={busy} onPress={() => void run(() => Linking.openURL(link))} />
+        <SecondaryButton label="Abrir rascunho de e-mail" disabled={busy} onPress={() => void run(() => Linking.openURL(
+          'mailto:?subject=' + encodeURIComponent('Proposta comercial') + '&body=' +
+          encodeURIComponent('Olá! Segue o link da proposta comercial: ' + link)))} />
         <ActionButton label="Compartilhar pelo WhatsApp" disabled={busy} onPress={() => void run(() =>
           Linking.openURL('https://wa.me/?text=' + encodeURIComponent('Olá! Segue sua proposta comercial: ' + link)))} />
         {Platform.OS !== 'web' && <Chip label="Mais opções de compartilhamento" disabled={busy}
@@ -186,6 +233,8 @@ function CompanyProposals({ client, company, quote, back }: {
         <Text style={styles.text}>Copie o link antes de sair desta tela. Para gerar outro link, emita uma nova versão.</Text>
       </View>}
     </>}
+    </>}
+    {(!quote || tab === 'history') && <>
     {!quote && <View style={styles.row}>
       <Chip label="Novas" active={unread} onPress={() => { setUnread(true); setOffset(0); }} />
       <Chip label="Todas" active={!unread} onPress={() => { setUnread(false); setOffset(0); }} />
@@ -212,6 +261,7 @@ function CompanyProposals({ client, company, quote, back }: {
       {offset > 0 && <Chip label="Anterior" onPress={() => setOffset(offset - pageSize)} />}
       {rows.length > pageSize && <Chip label="Próxima" onPress={() => setOffset(offset + pageSize)} />}
     </View>
+    </>}
     {error !== '' && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}
     <Chip label="Voltar" disabled={busy} onPress={back} />
   </Screen>;

@@ -1,19 +1,25 @@
-import { useFocusEffect } from 'expo-router';
+import Feather from '@expo/vector-icons/Feather';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, Image, Pressable, Text, View } from 'react-native';
 import { confirmAction } from '../components/confirmAction';
 
 import { ActionButton } from '../components/ActionButton';
 import { Screen } from '../components/Screen';
+import { EmptyState, IconButton, ListItem, LoadingState, PrimaryButton, SearchBar, SecondaryButton, StatusBadge } from '../design-system';
+import { iconSize, palette } from '../design-system/tokens';
+import { useCompanies } from '../navigation/useCompanies';
 import { colors } from '../theme';
-import { catalogStyles as styles, Chip, Field } from './controls';
+import { catalogStyles as styles, Chip } from './controls';
+import { CatalogCart, type CartEntry } from './CatalogCart';
 import { ItemForm } from './ItemForm';
 import { groups, money } from './model';
 import type { Category, Company, Item, Kind, Ownership } from './model';
-import { archiveItem, catalogError, createCompany, getPhotoUrl, listCategories, listCompanies, listItems, pageSize } from './repository';
+import { archiveItem, catalogError, getPhotoUrl, listCategories, listItems, pageSize } from './repository';
 
-const kinds = Object.keys(groups) as Kind[];
+const kinds: Kind[] = ['asset', 'balloon', 'material'];
+const kindLabels = { ...groups, material: 'Materiais' };
+const kindIcons = { balloon: 'wind', asset: 'layers', material: 'package' } as const;
 
 function itemDescription(item: Item, categoryName?: string) {
   switch (item.kind) {
@@ -34,16 +40,27 @@ function itemCost(item: Item) {
   }
 }
 
-function ItemDetails({ client, company, item, category, onBack, onEdit, onChanged, onUse }: {
+function ItemDetails({ client, company, item, category, onBack, onEdit, onChanged, onAdd, inCart }: {
   client: SupabaseClient; company: Company; item: Item; category?: Category;
   onBack: () => void; onEdit: () => void; onChanged: (message: string) => void;
-  onUse: () => void;
+  onAdd: () => void; inCart: boolean;
 }) {
   const [photo, setPhoto] = useState('');
   const [photoError, setPhotoError] = useState(false);
   const [photoLoading, setPhotoLoading] = useState(Boolean(item.photo_path));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [published, setPublished] = useState<boolean>();
+
+  useEffect(() => {
+    if (company.role === 'member') return;
+    let active = true;
+    void client.from('catalog_items').select('website_visible').eq('company_id', company.id).eq('id', item.id)
+      .maybeSingle<{ website_visible: boolean }>().then(({ data, error: cause }) => {
+        if (active && !cause && data) setPublished(data.website_visible);
+      });
+    return () => { active = false; };
+  }, [client, company.id, company.role, item.id]);
 
   useEffect(() => {
     if (!item.photo_path) return;
@@ -71,6 +88,20 @@ function ItemDetails({ client, company, item, category, onBack, onEdit, onChange
     }
   }
 
+  async function changePublication() {
+    if (published === undefined || busy) return;
+    setBusy(true);
+    setError('');
+    try {
+      const { error: cause } = await client.rpc('set_catalog_website_visibility', {
+        p_company: company.id, p_item: item.id, p_visible: !published,
+      });
+      if (cause) throw cause;
+      setPublished(!published);
+    } catch (cause) { setError(catalogError(cause)); }
+    finally { setBusy(false); }
+  }
+
   const action = item.archived_at ? 'Reativar' : 'Arquivar';
   return (
     <Screen title={item.name} description={itemDescription(item, category?.name)}>
@@ -89,27 +120,30 @@ function ItemDetails({ client, company, item, category, onBack, onEdit, onChange
           <Text style={styles.text}>Acréscimo de {item.markup_percent?.toLocaleString('pt-BR')}%</Text>
         )}
         <Text style={styles.text}>{item.archived_at ? 'Arquivado' : 'Ativo'}</Text>
+        {!item.archived_at && published !== undefined && <Text style={styles.text}>{published ? 'Visível no site' : 'Oculto no site'}</Text>}
       </View>
       {error !== '' && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}
       {company.role !== 'member' && (
         <>
           <ActionButton label="Editar item" disabled={busy} onPress={onEdit} />
+          {!item.archived_at && published !== undefined && <SecondaryButton label={published ? 'Retirar do site' : 'Publicar no site'}
+            disabled={busy} onPress={() => void changePublication()} />}
           <Chip label={busy ? 'Aguarde…' : action} disabled={busy} onPress={() => {
             confirmAction(`${action} item?`, item.name, action, () => void changeArchive());
           }} />
         </>
       )}
-      {!item.archived_at && <ActionButton label="Usar na calculadora" disabled={busy} onPress={onUse} />}
+      {!item.archived_at && <PrimaryButton label={inCart ? 'Abrir carrinho' : 'Adicionar ao carrinho'} icon="shopping-cart" disabled={busy} onPress={onAdd} />}
       <Chip label="Voltar à lista" disabled={busy} onPress={onBack} />
     </Screen>
   );
 }
 
-function CompanyCatalog({ client, company, onSwitch, openCalculator }: {
-  client: SupabaseClient; company: Company; onSwitch: () => void;
-  openCalculator: (company: string, product: string) => void;
+function CompanyCatalog({ client, company, openQuote }: {
+  client: SupabaseClient; company: Company;
+  openQuote: (company: string, quote: string) => void;
 }) {
-  const [kind, setKind] = useState<Kind>('balloon');
+  const [kind, setKind] = useState<Kind>('asset');
   const [archived, setArchived] = useState(false);
   const [search, setSearch] = useState('');
   const [categoryId, setCategoryId] = useState('');
@@ -128,7 +162,19 @@ function CompanyCatalog({ client, company, onSwitch, openCalculator }: {
   const [revision, setRevision] = useState(0);
   const [selected, setSelected] = useState<Item>();
   const [editing, setEditing] = useState(false);
+  const [cart, setCart] = useState<CartEntry[]>([]);
+  const [showCart, setShowCart] = useState(false);
   const canWrite = company.role !== 'member';
+
+  function addToCart(item: Item) {
+    setCart((current) => current.length >= 200 || current.some((entry) => entry.item.id === item.id)
+      ? current : [...current, { item, quantity: '1' }]);
+  }
+
+  const cartSheet = showCart && <CatalogCart client={client} companyId={company.id} entries={cart}
+    updateQuantity={(id, quantity) => setCart((current) => current.map((entry) => entry.item.id === id ? { ...entry, quantity } : entry))}
+    remove={(id) => setCart((current) => current.filter((entry) => entry.item.id !== id))}
+    onClose={() => setShowCart(false)} onCreated={(id) => { setShowCart(false); setCart([]); openQuote(company.id, id); }} />;
 
   useEffect(() => {
     let current = true;
@@ -178,43 +224,56 @@ function CompanyCatalog({ client, company, onSwitch, openCalculator }: {
     setRevision((value) => value + 1);
   }
 
+  function selectKind(group: Kind) {
+    if (group === kind) return;
+    filter(() => {
+      setItems([]);
+      setLoading(true);
+      setCategories([]);
+      setCategoriesReady(false);
+      setKind(group);
+      setCategoryId('');
+      setOwnership('');
+    });
+  }
+
   if (editing && canWrite) {
     return <ItemForm client={client} company={company} kind={kind} item={selected} categories={categories}
       onCategory={(category) => setCategories((current) => [...current, category].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')))}
       onSaved={refresh} onCancel={() => setEditing(false)} />;
   }
   if (selected) {
-    return <ItemDetails client={client} company={company} item={selected}
-      onUse={() => openCalculator(company.id, selected.id)}
+    const inCart = cart.some(({ item }) => item.id === selected.id);
+    return <><ItemDetails client={client} company={company} item={selected} inCart={inCart}
+      onAdd={() => { addToCart(selected); setShowCart(true); }}
       category={categories.find((category) => category.id === selected.category_id)}
-      onBack={() => setSelected(undefined)} onEdit={() => setEditing(true)} onChanged={refresh} />;
+      onBack={() => setSelected(undefined)} onEdit={() => setEditing(true)} onChanged={refresh} />{cartSheet}</>;
   }
 
   return (
-    <Screen title="Catálogo" description={company.name}>
-      <View style={styles.row}>
-        <Chip label="Trocar empresa" onPress={onSwitch} />
-        <Chip label="Atualizar" onPress={() => refresh()} />
+    <Screen title="Catálogo" description={company.name} layout="wide"
+      action={<SecondaryButton label={`Carrinho (${cart.length})`} icon="shopping-cart" onPress={() => setShowCart(true)} />}>
+      <View accessibilityRole="radiogroup" accessibilityLabel="Tipo de item" style={styles.kindGrid}>
+        {kinds.map((group) => {
+          const active = group === kind;
+          return <Pressable key={group} accessibilityRole="radio" aria-checked={active}
+            onPress={() => selectKind(group)} style={({ pressed }) => [styles.kindTile, active && styles.kindActive, pressed && styles.kindPressed]}>
+            <Feather name={kindIcons[group]} color={palette.accent} size={iconSize.large} aria-hidden />
+            <Text style={[styles.kindLabel, active && styles.kindLabelActive]}>{kindLabels[group]}</Text>
+          </Pressable>;
+        })}
       </View>
-      <View style={styles.row}>
-        {kinds.map((group) => (
-          <Chip key={group} label={groups[group]} active={group === kind} onPress={() => filter(() => {
-            if (group === kind) return;
-            setCategories([]);
-            setCategoriesReady(false);
-            setKind(group);
-            setCategoryId('');
-            setOwnership('');
-          })} />
-        ))}
-      </View>
-      <View style={styles.card}>
-        <Field label="Pesquisar itens" value={search} onChangeText={(text) => filter(() => setSearch(text))} />
-        <Chip label={showFilters ? 'Ocultar filtros' : 'Filtros e ordenação'}
+      <View style={styles.toolbar}>
+        <View style={styles.search}><SearchBar label="Pesquisar itens" placeholder="Pesquisar itens" value={search}
+          onChangeText={(text) => filter(() => setSearch(text))} /></View>
+        <Chip label={showFilters ? 'Ocultar filtros' : 'Filtros'}
           active={showFilters || archived || sort !== 'name' || Boolean(categoryId || ownership)}
-          onPress={() => setShowFilters(!showFilters)} />
-        {showFilters && (
-          <>
+          onPress={() => setShowFilters((current) => !current)} />
+      </View>
+      {canWrite && <View style={styles.row}><PrimaryButton label="Novo item" icon="plus" disabled={!categoriesReady}
+        onPress={() => setEditing(true)} /></View>}
+      {showFilters && (
+          <View style={styles.card}>
             <View style={styles.row}>
               <Chip label="Ativos" active={!archived} onPress={() => filter(() => setArchived(false))} />
               <Chip label="Arquivados" active={archived} onPress={() => filter(() => setArchived(true))} />
@@ -235,103 +294,58 @@ function CompanyCatalog({ client, company, onSwitch, openCalculator }: {
                 <Chip label="Alugados" active={ownership === 'rented'} onPress={() => filter(() => setOwnership('rented'))} />
               </View>
             )}
-          </>
-        )}
-      </View>
-      {canWrite && <ActionButton label="Novo item" disabled={!categoriesReady} onPress={() => setEditing(true)} />}
+          </View>
+      )}
       {notice !== '' && <Text accessibilityRole="alert" style={styles.strong}>{notice}</Text>}
-      {categoryError !== '' && <Text accessibilityRole="alert" style={styles.error}>{categoryError}</Text>}
-      {error !== '' && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}
+      {categoryError !== '' && <EmptyState title="Não foi possível carregar as categorias" description={categoryError} error
+        action={{ label: 'Tentar novamente', onPress: () => refresh() }} />}
+      {error !== '' && <EmptyState title="Não foi possível carregar os itens" description={error} error
+        action={{ label: 'Tentar novamente', onPress: () => refresh() }} />}
       {loading ? <ActivityIndicator accessibilityLabel="Carregando itens" color={colors.blueGray} /> : error === '' && (
         <View style={styles.stack}>
-          {items.length === 0 && <Text style={styles.text}>Nenhum item encontrado.</Text>}
-          {items.map((item) => (
-            <Pressable key={item.id} accessibilityRole="button" onPress={() => setSelected(item)} style={styles.card}>
-              <Text style={styles.title}>{item.name}</Text>
-              <Text style={styles.text}>{itemDescription(item, categories.find((category) => category.id === item.category_id)?.name)}</Text>
-              {canWrite && <Text style={styles.strong}>{itemCost(item)}</Text>}
-            </Pressable>
-          ))}
+          {items.length === 0 && <EmptyState title="Nenhum item encontrado" icon={kindIcons[kind]}
+            description={canWrite && !search.trim() && !archived && !categoryId && !ownership
+              ? 'Use Novo item para começar.' : undefined} />}
+          {items.length > 0 && <View style={styles.results}>
+            {items.map((item) => {
+              const inCart = cart.some((entry) => entry.item.id === item.id);
+              return <View key={item.id} style={styles.productRow}>
+                <View style={styles.productCopy}><ListItem title={item.name} icon={kindIcons[item.kind]}
+                  detail={itemDescription(item, categories.find((category) => category.id === item.category_id)?.name)}
+                  trailing={canWrite ? <StatusBadge label={itemCost(item)} tone="positive" /> : undefined}
+                  onPress={() => setSelected(item)} /></View>
+                {!item.archived_at && <IconButton icon={inCart ? 'check' : 'plus'}
+                  label={inCart ? `Abrir carrinho com ${item.name}` : `Adicionar ${item.name} ao carrinho`}
+                  disabled={!inCart && cart.length >= 200}
+                  onPress={() => { if (inCart) setShowCart(true); else addToCart(item); }} />}
+              </View>;
+            })}
+          </View>}
           <View style={styles.row}>
             {offset > 0 && <Chip label="Anterior" onPress={() => setOffset(offset - pageSize)} />}
             {more && <Chip label="Próxima" onPress={() => setOffset(offset + pageSize)} />}
           </View>
         </View>
       )}
+      {cartSheet}
     </Screen>
   );
 }
 
-export function CatalogScreen({ client, userId, openCalculator }: {
-  client: SupabaseClient; userId: string; openCalculator: (company: string, product: string) => void;
+export function CatalogScreen({ client, userId, openQuote }: {
+  client: SupabaseClient; userId: string; openQuote: (company: string, quote: string) => void;
 }) {
-  const [companies, setCompanies] = useState<Company[]>([]);
-  const [companyId, setCompanyId] = useState('');
-  const [name, setName] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [creating, setCreating] = useState(false);
-  const [error, setError] = useState('');
-  const [createError, setCreateError] = useState('');
-  const [revision, setRevision] = useState(0);
+  const { company, loading, error, retry } = useCompanies(client, userId);
 
-  useFocusEffect(useCallback(() => {
-    let current = true;
-    setLoading(true);
-    setError('');
-    void listCompanies(client, userId).then((data) => {
-      if (current) setCompanies(data);
-    }).catch((cause) => {
-      if (current) setError(catalogError(cause));
-    }).finally(() => {
-      if (current) setLoading(false);
-    });
-    return () => { current = false; };
-  }, [client, userId, revision]));
-
-  async function addCompany() {
-    if (!name.trim()) return;
-    setCreating(true);
-    setCreateError('');
-    try {
-      setCompanyId(await createCompany(client, name.trim()));
-      setName('');
-      setRevision((value) => value + 1);
-    } catch (cause) {
-      setCreateError(catalogError(cause));
-    } finally {
-      setCreating(false);
-    }
+  if (company && !error) {
+    return <CompanyCatalog key={company.id} client={client} company={company} openQuote={openQuote} />;
   }
 
-  const company = companies.find((entry) => entry.id === companyId);
-  if (company && !loading && !error) {
-    return <CompanyCatalog key={company.id} client={client} company={company}
-      openCalculator={openCalculator}
-      onSwitch={() => { setCompanyId(''); setRevision((value) => value + 1); }} />;
-  }
-
-  return (
-    <Screen title="Catálogo" description="Selecione a empresa que deseja consultar.">
-      {loading ? <ActivityIndicator accessibilityLabel="Carregando empresas" color={colors.blueGray} /> : (
-        <>
-          {!error && companies.map((entry) => <ActionButton key={entry.id} label={entry.name} disabled={creating}
-            onPress={() => setCompanyId(entry.id)} />)}
-          {companies.length === 0 && !error && <Text style={styles.text}>Sua conta ainda não tem uma empresa ativa.</Text>}
-          {(!error || creating) && (
-            <View style={styles.card}>
-              <Field label="Nome da nova empresa" value={name} onChangeText={setName} disabled={creating} />
-              {createError !== '' && <Text accessibilityRole="alert" style={styles.error}>{createError}</Text>}
-              <Chip label={creating ? 'Criando…' : 'Criar empresa'} disabled={creating || !name.trim()} onPress={() => void addCompany()} />
-            </View>
-          )}
-          {error !== '' && (
-            <>
-              <Text accessibilityRole="alert" style={styles.error}>{error}</Text>
-              <Chip label="Tentar novamente" onPress={() => setRevision((value) => value + 1)} />
-            </>
-          )}
-        </>
-      )}
-    </Screen>
-  );
+  return <Screen title="Catálogo" layout="wide">
+    {loading ? <LoadingState label="Carregando seu acervo…" /> : error
+      ? <EmptyState title="Não foi possível abrir o catálogo" description={error} error
+        action={{ label: 'Tentar novamente', onPress: retry }} />
+      : <EmptyState title="Seu acesso ainda não está vinculado"
+        description="Peça ao responsável da empresa para vincular sua conta." icon="briefcase" />}
+  </Screen>;
 }

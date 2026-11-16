@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <link rel="icon" type="image/png" href="assets/icone-delicado.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="referrer" content="no-referrer">
+  <meta name="theme-color" content="#FAF9FC">
+  <title>Solicitar orçamento | Delicado Pro</title>
+  <link rel="stylesheet" href="site.css">
+  <script defer src="supabase.js"></script>
+  <script defer src="orcamento-config.js"></script>
+  <script type="module" src="orcamento.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#conteudo">Ir para o conteúdo</a>
+  <header class="site-header">
+    <div class="wrap header-content">
+      <a class="wordmark" href="./">Delicado <span>Pro</span></a>
+      <nav class="site-nav" aria-label="Navegação principal">
+        <a href="./">Início</a>
+        <a href="./#decoracao">Decoração</a>
+        <a href="catalogo.html">Catálogo</a>
+        <a href="sobre.html">Sobre</a>
+        <a href="contato.html">Contato</a>
+        <a class="nav-cta" href="orcamento.html" aria-current="page">Orçamento</a>
+      </nav>
+    </div>
+  </header>
+  <main class="wrap" id="conteudo" tabindex="-1">
+    <div class="flow">
+      <section class="card auth-card" id="access" aria-labelledby="access-title">
+        <div class="auth-content">
+          <p class="eyebrow" id="access-eyebrow">Solicitação de orçamento</p>
+        <h1 id="access-title">Entre para continuar</h1>
+        <p class="description" id="access-description">Entre com sua conta para escolher a decoração e enviar seu pedido.</p>
+        <form id="auth-form" method="post">
+          <label class="field" id="signup-name" hidden>Seu nome
+            <input name="name" autocomplete="name" maxlength="120" disabled>
+          </label>
+          <label class="field" id="auth-email-field">E-mail <input type="email" name="email" autocomplete="email" required maxlength="254"></label>
+          <div class="field" id="auth-password-field">
+            <label for="auth-password">Senha</label>
+            <input id="auth-password" type="password" name="password" autocomplete="current-password" required maxlength="128">
+            <p class="field-hint" id="password-hint" hidden>Use pelo menos 8 caracteres.</p>
+          </div>
+          <label class="field" id="signup-confirmation" hidden>Confirme a senha
+            <input type="password" name="confirmation" autocomplete="new-password" maxlength="128" disabled>
+          </label>
+          <button type="submit" class="button" id="auth-button" disabled>Entrar</button>
+        </form>
+        <p id="auth-message" class="feedback" role="status"></p>
+        <button type="button" class="button outlined" id="access-retry" hidden>Verificar acesso novamente</button>
+        <div class="auth-alternate" id="auth-alternate">
+          <p id="auth-alternate-label">É a sua primeira vez aqui?</p>
+          <button type="button" class="button outlined" id="auth-switch" disabled>Criar minha conta</button>
+        </div>
+        <button type="button" class="text-button" id="auth-recover" disabled>Esqueci minha senha</button>
+        <noscript><p>Ative o JavaScript para entrar e solicitar o orçamento.</p></noscript>
+        </div>
+        <figure class="auth-image">
+          <figcaption>Imagem de referência</figcaption>
+        </figure>
+      </section>
+
+      <section class="card journey-card" id="request" aria-labelledby="request-title" hidden>
+        <p class="eyebrow" id="request-step">Etapa 1 de 5</p>
+        <h1 id="request-title" tabindex="-1">Conte sobre o evento</h1>
+        <ol class="journey-progress" aria-label="Etapas da solicitação">
+          <li id="progress-1" aria-current="step">Evento</li>
+          <li id="progress-2">Decoração</li>
+          <li id="progress-3">Contato</li>
+          <li id="progress-4">Revisão</li>
+          <li id="progress-5">Confirmação</li>
+        </ol>
+        <div class="account"><span id="signed-in"></span><button type="button" class="text-button" id="signout">Sair</button></div>
+        <form id="request-form" method="post" novalidate>
+          <fieldset id="event-fields" aria-label="Dados do evento">
+            <label class="field">Tipo de evento
+              <select name="event" required>
+                <option value="" disabled selected>Selecione o evento</option>
+                <option value="casamento">Casamento ou noivado</option>
+                <option value="aniversario">Aniversário</option>
+                <option value="cha">Chá ou comemoração familiar</option>
+                <option value="corporativo">Evento corporativo</option>
+                <option value="outro">Outro evento</option>
+              </select>
+            </label>
+            <div class="field-pair">
+              <label class="field">Data prevista (opcional) <input name="date" type="date"></label>
+              <label class="field">Cidade <input name="city" autocomplete="address-level2" required maxlength="120"></label>
+            </div>
+            <label class="field">Local (se já souber) <input name="venue" maxlength="150"></label>
+            <label class="field">Convidados aproximados (opcional) <input name="guests" type="number" min="1" max="100000" step="1" inputmode="numeric"></label>
+          </fieldset>
+
+          <fieldset id="decoration-fields" aria-label="Decoração" hidden>
+            <fieldset aria-describedby="request-message">
+              <legend>Quais serviços você quer incluir?</legend>
+              <div class="checks">
+                <label><input type="checkbox" name="service" value="cenario"> Painel e cenário</label>
+                <label><input type="checkbox" name="service" value="baloes"> Balões</label>
+                <label><input type="checkbox" name="service" value="flores"> Arranjos florais</label>
+                <label><input type="checkbox" name="service" value="mesas"> Decoração das mesas</label>
+                <label><input type="checkbox" name="service" value="completa"> Decoração completa</label>
+              </div>
+            </fieldset>
+            <label class="field">Inspirações e observações <textarea name="details" rows="3" maxlength="2000" placeholder="Cores, estilo ou links de referência"></textarea></label>
+            <section class="request-selection" aria-labelledby="selection-title">
+              <h2 id="selection-title">Materiais do catálogo</h2>
+              <p id="selection-empty">Escolha os materiais e as quantidades para continuar.</p>
+              <ul id="selected-materials"></ul>
+              <button type="button" class="button outlined" id="edit-selection">Escolher materiais</button>
+            </section>
+          </fieldset>
+
+          <fieldset id="contact-fields" aria-label="Dados de contato" hidden>
+            <label class="field">Seu nome <input name="name" autocomplete="name" required maxlength="120"></label>
+            <label class="field">WhatsApp (opcional) <input name="whatsapp" type="tel" autocomplete="tel" maxlength="24" placeholder="Ex.: (11) 99999-0000"></label>
+            <label class="field">E-mail verificado <input name="verified-email" type="email" readonly></label>
+            <label class="field">Observações adicionais <textarea name="notes" rows="3" maxlength="700"></textarea></label>
+          </fieldset>
+
+          <section id="review-fields" aria-label="Resumo da solicitação" hidden>
+            <dl class="journey-summary" id="request-summary"></dl>
+            <h2>Materiais e quantidades</h2>
+            <ul id="review-materials"></ul>
+            <div class="journey-edit">
+              <button type="button" class="text-button" id="edit-event">Editar evento</button>
+              <button type="button" class="text-button" id="edit-decoration">Editar decoração</button>
+              <button type="button" class="text-button" id="edit-contact">Editar contato</button>
+            </div>
+          </section>
+
+          <p id="request-message" class="feedback" role="status"></p>
+          <div class="journey-actions">
+            <button type="button" class="button outlined" id="request-back" hidden>Voltar</button>
+            <button type="submit" class="button" id="request-button">Continuar</button>
+          </div>
+          <p class="field-hint">Seu rascunho fica salvo nesta aba.</p>
+        </form>
+      </section>
+
+      <section class="card" id="done" aria-labelledby="done-title" hidden>
+        <p class="eyebrow">Etapa 5 de 5 · Confirmação</p>
+        <h1 id="done-title" tabindex="-1">Solicitação recebida</h1>
+        <p class="description">A equipe vai analisar os detalhes e poderá entrar em contato.</p>
+        <p id="request-receipt" class="request-receipt" hidden></p>
+        <a class="button" href="./">Voltar ao site</a>
+      </section>
+    </div>
+  </main>
+</body>
+</html>

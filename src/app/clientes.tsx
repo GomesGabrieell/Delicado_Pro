@@ -1,9 +1,11 @@
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { ClientsScreen } from '../clients/ClientsScreen';
 import { useRouteSession } from '../navigation/useRouteSession';
+import { routeId } from '../navigation/routes';
 
 export default function Clients() {
   const auth = useRouteSession();
-  return auth && <ClientsScreen client={auth.client} userId={auth.user.id}
-    openQuote={(params) => router.push({ pathname: '/orcamentos', params })} />;
+  const { company } = useLocalSearchParams();
+  return auth && <ClientsScreen client={auth.client} userId={auth.user.id} initialCompany={routeId(company)}
+    openQuote={(params) => router.push({ pathname: '/orcamento', params })} />;
 }

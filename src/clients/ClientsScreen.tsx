@@ -9,6 +9,8 @@ import type { Company } from '../catalog/model';
 import { listCompanies } from '../catalog/repository';
 import { ActionButton } from '../components/ActionButton';
 import { Screen } from '../components/Screen';
+import { EmptyState, ListItem, PrimaryButton, SearchBar, StatusBadge } from '../design-system';
+import { WorkspaceList } from '../components/WorkspaceControls';
 import { statuses } from '../quotes/repository';
 import { colors } from '../theme';
 import { clientFields, validateClient, type Client, type ClientFields } from './model';
@@ -127,7 +129,8 @@ function ClientDetails({ client, company, id, close, openQuote }: {
     initial={{ ...fields, name: row.name }} close={() => setEditing(false)}
     saved={() => { setEditing(false); setRevision((value) => value + 1); }} />;
   const archiveAction = row.archived_at ? 'Reativar' : 'Arquivar';
-  return <Screen title={row.name} description={row.archived_at ? 'Cliente arquivado' : 'Cliente ativo'}>
+  return <Screen title={row.name}>
+    <StatusBadge label={row.archived_at ? 'Cliente arquivado' : 'Cliente ativo'} tone={row.archived_at ? 'neutral' : 'positive'} />
     {manage && fields && <View style={styles.card}>
       <Text style={styles.title}>Cadastro</Text>
       {clientFields.map((key) => fields[key] ? <View key={key}>
@@ -207,14 +210,14 @@ function CompanyClients({ client, company, back, openQuote }: {
     saved={(id) => { setCreating(false); setSelected(id); }} />;
   if (selected) return <ClientDetails client={client} company={company} id={selected}
     close={() => { setSelected(''); setOffset(0); }} openQuote={openQuote} />;
-  return <Screen title="Clientes" description={company.name}>
-    {manage && <ActionButton label="Novo cliente" onPress={() => setCreating(true)} />}
+  return <Screen title="Clientes" description={company.name} layout="wide"
+    action={manage && <PrimaryButton label="Novo cliente" icon="plus" onPress={() => setCreating(true)} />}>
     <View style={styles.card}>
       {manage && <View style={styles.row}>
         <Chip label="Nome" active={!byDocument} onPress={() => { setByDocument(false); setQuery(''); setOffset(0); }} />
         <Chip label="CPF ou CNPJ" active={byDocument} onPress={() => { setByDocument(true); setQuery(''); setOffset(0); }} />
       </View>}
-      <Field label={manage && byDocument ? 'Buscar por documento' : 'Buscar por nome'} value={query}
+      <SearchBar label={manage && byDocument ? 'Buscar por documento' : 'Buscar por nome'} value={query}
         onChangeText={(value) => { setQuery(value); setOffset(0); }} />
       <View style={styles.row}>
         <Chip label="Ativos" active={!archived} onPress={() => { setArchived(false); setOffset(0); }} />
@@ -225,11 +228,10 @@ function CompanyClients({ client, company, back, openQuote }: {
       <Text style={styles.error} accessibilityRole="alert">{error}</Text>
       <Chip label="Tentar novamente" onPress={() => setRevision((value) => value + 1)} />
     </> : <>
-      {rows.length === 0 && <Text style={styles.text}>Nenhum cliente encontrado.</Text>}
-      {rows.slice(0, clientPage).map((row) => <View key={row.id} style={styles.card}>
-        <Text style={styles.title}>{row.name}</Text>
-        <Chip label={`Consultar ${row.name}`} onPress={() => setSelected(row.id)} />
-      </View>)}
+      {rows.length === 0 && <EmptyState title="Nenhum cliente encontrado" icon="users"
+        description={!query.trim() && !archived ? 'Os clientes das solicitações do site aparecem aqui assim que o pedido é enviado.' : undefined} />}
+      {rows.length > 0 && <WorkspaceList>{rows.slice(0, clientPage).map((row) => <ListItem key={row.id} title={row.name} icon="user"
+        onPress={() => setSelected(row.id)} />)}</WorkspaceList>}
       <View style={styles.row}>
         {offset > 0 && <Chip label="Anterior" onPress={() => setOffset(offset - clientPage)} />}
         {rows.length > clientPage && <Chip label="Próxima" onPress={() => setOffset(offset + clientPage)} />}
@@ -239,11 +241,11 @@ function CompanyClients({ client, company, back, openQuote }: {
   </Screen>;
 }
 
-export function ClientsScreen({ client, userId, openQuote }: {
-  client: SupabaseClient; userId: string; openQuote: (target: Target) => void;
+export function ClientsScreen({ client, userId, openQuote, initialCompany }: {
+  client: SupabaseClient; userId: string; openQuote: (target: Target) => void; initialCompany?: string;
 }) {
   const [companies, setCompanies] = useState<Company[]>([]);
-  const [companyId, setCompanyId] = useState('');
+  const [companyId, setCompanyId] = useState(initialCompany ?? '');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [revision, setRevision] = useState(0);

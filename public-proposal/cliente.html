@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <link rel="icon" type="image/png" href="/assets/icone-delicado.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <meta name="referrer" content="no-referrer">
+  <title>Portal do Cliente | Delicado Pro</title>
+  <link rel="stylesheet" href="/site.css">
+  <link rel="stylesheet" href="/cliente.css">
+  <script defer src="/supabase.js"></script>
+  <script defer src="/orcamento-config.js"></script>
+  <script type="module" src="/cliente.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#portal-content">Ir para o conteúdo</a>
+  <header class="site-header">
+    <div class="wrap portal-header">
+      <a class="wordmark" href="/">Delicado <span>Pro</span></a>
+      <div class="portal-account" id="portal-account" hidden>
+        <a id="staff-link" href="/admin" hidden>Área da empresa</a>
+        <button id="portal-logout" class="text-button" type="button">Sair</button>
+      </div>
+    </div>
+  </header>
+  <main class="wrap portal-area" id="portal-content" tabindex="-1">
+    <nav class="portal-nav" aria-label="Portal do Cliente" id="portal-nav" hidden>
+      <a href="/cliente">Início</a>
+      <a href="/cliente/orcamentos">Orçamentos</a>
+      <a href="/cliente/propostas">Propostas</a>
+      <a href="/cliente/eventos">Eventos</a>
+      <a href="/cliente/perfil">Perfil</a>
+    </nav>
+    <p class="feedback" id="portal-status" role="status" data-state="loading">Verificando seu acesso…</p>
+    <section id="portal-view" aria-label="Conteúdo da sua conta"></section>
+    <noscript>Ative o JavaScript no navegador para acessar sua conta.</noscript>
+  </main>
+</body>
+</html>

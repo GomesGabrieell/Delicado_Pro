@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <link rel="icon" type="image/png" href="assets/icone-delicado.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <meta name="referrer" content="no-referrer">
+  <meta name="description" content="Consulte e responda à proposta comercial que você recebeu.">
+  <meta name="theme-color" content="#FAF9FC">
+  <title>Portal de propostas | Delicado Pro</title>
+  <link rel="stylesheet" href="site.css">
+  <link rel="stylesheet" href="proposal.css">
+  <script type="module" src="proposal.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#conteudo">Ir para o conteúdo</a>
+  <header class="site-header">
+    <div class="wrap header-content">
+      <a class="wordmark" href="./">Delicado <span>Pro</span></a>
+      <nav class="site-nav" aria-label="Navegação principal">
+        <a href="./">Início</a>
+        <a href="./#decoracao">Decoração</a>
+        <a href="catalogo.html">Catálogo</a>
+        <a href="sobre.html">Sobre</a>
+        <a href="contato.html">Contato</a>
+        <a class="nav-cta" href="orcamento.html">Orçamento</a>
+      </nav>
+    </div>
+  </header>
+  <main class="wrap proposal-page" id="conteudo" tabindex="-1">
+    <section id="entrance" aria-labelledby="entranceTitle">
+      <div class="entrance-content surface">
+        <p class="eyebrow">Portal do cliente</p>
+        <h1 id="entranceTitle">Sua proposta comercial</h1>
+        <p id="notice" class="notice feedback" role="status">Abra o link completo que você recebeu da empresa para consultar e responder à sua proposta.</p>
+        <button id="retry" type="button" class="button outlined" hidden>Tentar novamente</button>
+        <noscript><p>Ative o JavaScript no navegador para abrir sua proposta.</p></noscript>
+      </div>
+    </section>
+    <article id="proposal" hidden tabindex="-1">
+      <header class="masthead surface">
+        <p id="company" class="company"></p>
+        <nav aria-label="Seções da proposta">
+          <a href="#details" data-section="details">Detalhes</a>
+          <a href="#history" data-section="history">Responder <span aria-hidden="true">↗</span></a>
+        </nav>
+      </header>
+      <div class="cover">
+        <div class="intro">
+          <p class="label" id="code"></p>
+          <h1 id="title"></h1>
+          <div class="recipient">
+            <p class="label">Preparado para</p>
+            <p id="customer"></p>
+            <p id="event"></p>
+          </div>
+        </div>
+        <section id="references" class="references" aria-labelledby="referenceTitle" hidden>
+          <div id="images"></div>
+          <h2 id="referenceTitle">Referências de decoração</h2>
+        </section>
+      </div>
+      <div class="content">
+        <div class="details surface">
+          <section aria-labelledby="details">
+            <h2 id="details" tabindex="-1">Detalhes da decoração</h2>
+            <p id="decoration" class="multiline"></p>
+            <section id="proposal-materials" aria-labelledby="materials-title" hidden>
+              <h3 id="materials-title">Materiais e quantidades</h3>
+              <ul id="material-lines"></ul>
+            </section>
+          </section>
+          <div class="download">
+            <button id="pdf" class="button outlined">Baixar PDF <span aria-hidden="true">↓</span></button>
+            <p id="pdfStatus" class="feedback" role="status"></p>
+          </div>
+        </div>
+        <aside class="summary surface" aria-labelledby="priceTitle">
+          <section class="price">
+            <h2 class="label" id="priceTitle">Valor total</h2>
+            <strong id="total"></strong>
+            <p id="payment" class="multiline"></p>
+            <p id="expiry"></p>
+          </section>
+          <section id="history" aria-labelledby="responseTitle" tabindex="-1">
+            <h2 id="responseTitle">Sua resposta</h2>
+            <p id="response" class="feedback" role="status"></p>
+            <div id="actions" class="actions">
+              <button class="button proposal-action" data-choice="approved">Aprovar proposta</button>
+              <button data-choice="negotiate" class="button outlined">Solicitar alterações</button>
+              <button id="decline" class="button outlined">Recusar proposta</button>
+            </div>
+            <div id="revision" class="actions" hidden>
+              <p>Você deseja receber uma nova proposta?</p>
+              <button class="button proposal-action" data-choice="declined" data-revision="yes">Sim, quero receber</button>
+              <button data-choice="declined" data-revision="no" class="button outlined">Não, obrigado</button>
+              <button id="cancel" class="button outlined">Voltar</button>
+            </div>
+            <a id="whatsapp" class="button proposal-action" hidden rel="noreferrer noopener" target="_blank">Conversar no WhatsApp</a>
+          </section>
+        </aside>
+      </div>
+    </article>
+    <footer class="footer">Portal de propostas · Delicado Pro</footer>
+  </main>
+</body>
+</html>

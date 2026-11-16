@@ -1,0 +1,4 @@
+project_id = "delicado-pro"
+
+[functions.public-proposal]
+verify_jwt = false

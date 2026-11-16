@@ -9,6 +9,7 @@ import { groups, type Company, type Kind } from '../catalog/model';
 import { catalogError, listCompanies } from '../catalog/repository';
 import { ActionButton } from '../components/ActionButton';
 import { Screen } from '../components/Screen';
+import { BottomSheet, EmptyState, ListItem, SearchBar, SecondaryButton, StatusBadge } from '../design-system';
 import { colors } from '../theme';
 import { createQuoteFromCalculator, loadQuote, quoteError, saveQuoteComposition, type Snapshot } from '../quotes/repository';
 import { FinancialSteps, financialSteps, type CartLine } from './FinancialSteps';
@@ -44,23 +45,20 @@ function ProductPicker({ client, companyId, kind, lines, add }: {
 
   return (
     <View style={styles.stack}>
-      <Field label="Buscar no catálogo" value={search} onChangeText={(text) => { setSearch(text); setOffset(0); }} />
+      <SearchBar label="Buscar no catálogo" value={search} onChangeText={(text) => { setSearch(text); setOffset(0); }} />
       {loading ? <ActivityIndicator color={colors.blueGray} accessibilityLabel="Carregando produtos" /> : error ? <>
         <Text accessibilityRole="alert" style={styles.error}>{error}</Text>
         <Chip label="Tentar novamente" onPress={() => setRevision((value) => value + 1)} />
       </> : <>
-        {items.length === 0 && <Text style={styles.text}>Nenhum produto encontrado.</Text>}
+        {items.length === 0 && <EmptyState title="Nenhum produto encontrado" icon="search" />}
         {items.slice(0, calculatorPageSize).map((product) => {
           const added = lines.some((line) => line.product.id === product.id);
           const description = product.kind === 'balloon' ? [product.brand, product.size].filter(Boolean).join(' · ')
             : product.kind === 'material' ? product.unit : product.ownership === 'rented' ? 'Alugado' : 'Próprio';
           return (
-            <View key={product.id} style={styles.card}>
-              <Text style={styles.title}>{product.name}</Text>
-              {description && <Text style={styles.text}>{description}</Text>}
-              <Chip label={added ? 'No carrinho' : `Adicionar ${product.name}`} disabled={added || lines.length >= 200}
-                onPress={() => add(product)} />
-            </View>
+            <ListItem key={product.id} title={product.name} detail={description ?? undefined} icon="package"
+              trailing={<StatusBadge label={added ? 'No carrinho' : 'Adicionar'} />}
+              disabled={added || lines.length >= 200} onPress={() => add(product)} />
           );
         })}
         <View style={styles.row}>
@@ -80,6 +78,7 @@ function CompanyCalculator({ client, company, onBack, target, seedProduct, onQuo
   const financial = company.role !== 'member';
   const steps = financial ? [...Object.values(groups), ...financialSteps] : Object.values(groups);
   const [index, setIndex] = useState(0);
+  const [showSteps, setShowSteps] = useState(false);
   const [lines, setLines] = useState<CartLine[]>([]);
   const [draft, setDraft] = useState<SavedDraft>();
   const [name, setName] = useState('');
@@ -95,8 +94,25 @@ function CompanyCalculator({ client, company, onBack, target, seedProduct, onQuo
   const [financialVersion, setFinancialVersion] = useState(0);
   const [quoteVersion, setQuoteVersion] = useState('');
   const [quoteSnapshot, setQuoteSnapshot] = useState<Snapshot>();
-  const step = steps[index];
-  const kind = kinds[index];
+  const currentStep = Math.min(index, steps.length - 1);
+  const step = steps[currentStep];
+  const kind = kinds[currentStep];
+
+  function goToStep(position: number) {
+    const invalid = position > currentStep && lines.find(({ product, quantity }) => {
+      if (product.kind !== kind) return false;
+      const count = parseDecimal(quantity, product.kind === 'material' ? 3 : 0);
+      return product.archived_at || count === null || count <= 0n;
+    });
+    if (invalid) {
+      setError(`Revise a quantidade ou remova “${invalid.product.name}”.`);
+      setShowSteps(false);
+      return;
+    }
+    setError('');
+    setIndex(position);
+    setShowSteps(false);
+  }
 
   useEffect(() => {
     if (!seedProduct || target) return;
@@ -273,12 +289,21 @@ function CompanyCalculator({ client, company, onBack, target, seedProduct, onQuo
         </View>
       ) : (
         <>
-          <View style={styles.row}>
-            {steps.map((label, position) => (
-              <Chip key={label} label={label} active={position === index} onPress={() => setIndex(position)} />
-            ))}
+          <View style={styles.card}>
+            <View style={styles.row}>
+              <StatusBadge label={`Etapa ${currentStep + 1} de ${steps.length}`} tone="positive" />
+              <StatusBadge label={`${lines.length} ${lines.length === 1 ? 'item' : 'itens'}`} />
+            </View>
+            <Text accessibilityRole="header" style={styles.title}>{step}</Text>
+            <View style={styles.row}>
+              <SecondaryButton label="Ver etapas" icon="list" disabled={busy} onPress={() => setShowSteps(true)} />
+            </View>
           </View>
-          <Text accessibilityRole="header" style={styles.title}>{step}</Text>
+          <BottomSheet visible={showSteps} title="Etapas da composição" onClose={() => setShowSteps(false)}>
+            {steps.map((label, position) => <ListItem key={label} title={label}
+              trailing={position === currentStep ? <StatusBadge label="Atual" tone="positive" /> : undefined}
+              onPress={() => goToStep(position)} />)}
+          </BottomSheet>
           {missing.length > 0 && <View style={styles.card}>
             <Text style={styles.error}>{missing.length} item(ns) indisponível(is) na composição.</Text>
             <Chip label="Remover itens indisponíveis" onPress={() => setMissing([])} />
@@ -303,17 +328,17 @@ function CompanyCalculator({ client, company, onBack, target, seedProduct, onQuo
       )}
       {!target && mode === 'cart' && <Field label="Nome da composição ou do orçamento" value={name}
         onChangeText={setName} disabled={busy} />}
-      {financial && (!target || quoteVersion) && <View style={mode === 'drafts' ? { display: 'none' } : styles.stack}>
+      {financial && (!target || Boolean(quoteVersion)) && <View style={mode === 'drafts' ? { display: 'none' } : styles.stack}>
         <FinancialSteps key={financialVersion} client={client} companyId={company.id} lines={lines}
           step={step} hasMissingItems={missing.length > 0} quoteBusy={busy} initialSnapshot={quoteSnapshot}
           quoteLabel={target ? 'Registrar cálculo no orçamento' : 'Criar orçamento com este cálculo'}
           onSaveQuote={(snapshot) => void persist(snapshot, !target)} />
       </View>}
       {mode === 'cart' && <>
-        {kind && !busy && (!target || quoteVersion) && <ProductPicker key={kind} client={client} companyId={company.id} kind={kind} lines={lines}
+        {kind && !busy && (!target || Boolean(quoteVersion)) && <ProductPicker key={kind} client={client} companyId={company.id} kind={kind} lines={lines}
           add={(product) => setLines((items) => items.length >= 200 || items.some((item) => item.product.id === product.id)
             ? items : [...items, { product, quantity: '1', whole: false }])} />}
-        {target ? (!financial && <ActionButton label="Salvar composição no orçamento" disabled={busy} onPress={() => void persist()} />) : <View style={styles.card}>
+        {target ? (!financial && <ActionButton label="Salvar composição no orçamento" disabled={busy || !quoteVersion} onPress={() => void persist()} />) : <View style={styles.card}>
           <Text style={styles.text}>Salve os produtos e as quantidades para retomar a composição.</Text>
           <ActionButton label={busy ? 'Salvando…' : 'Salvar composição'} disabled={busy} onPress={() => void persist()} />
           {!financial && <Chip label="Criar orçamento com a composição" disabled={busy} onPress={() => void persist(undefined, true)} />}
@@ -321,16 +346,21 @@ function CompanyCalculator({ client, company, onBack, target, seedProduct, onQuo
         </View>}
       </>}
       {error !== '' && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}
+      {mode === 'cart' && <View style={styles.row}>
+        {currentStep > 0 && <Chip label="Etapa anterior" disabled={busy} onPress={() => goToStep(currentStep - 1)} />}
+        {currentStep < steps.length - 1 && <ActionButton label="Continuar" disabled={busy} onPress={() => goToStep(currentStep + 1)} />}
+      </View>}
     </Screen>
   );
 }
 
-export function CalculatorScreen({ client, userId, target, seed, onQuoteSaved, onOpenQuote }: {
+export function CalculatorScreen({ client, userId, target, seed, initialCompany, onQuoteSaved, onOpenQuote }: {
   client: SupabaseClient; userId: string; target?: { company: string; quote: string }; onQuoteSaved?: () => void;
   seed?: { company: string; product: string }; onOpenQuote: (company: string, quote: string) => void;
+  initialCompany?: string;
 }) {
   const [companies, setCompanies] = useState<Company[]>([]);
-  const [selected, setSelected] = useState('');
+  const [selected, setSelected] = useState(initialCompany ?? '');
   const [useSeed, setUseSeed] = useState(Boolean(seed));
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -362,7 +392,7 @@ export function CalculatorScreen({ client, userId, target, seed, onQuoteSaved, o
         <Text accessibilityRole="alert" style={styles.error}>{error}</Text>
         <Chip label="Tentar novamente" onPress={() => setRevision((value) => value + 1)} />
       </> : target || useSeed ? <Text style={styles.error}>Empresa indisponível para esta conta.</Text>
-        : companies.length === 0 ? <Text style={styles.text}>Nenhuma empresa ativa. Acesse o Catálogo para criar uma empresa.</Text>
+        : companies.length === 0 ? <Text style={styles.text}>Peça ao responsável da empresa para vincular sua conta.</Text>
         : companies.map((entry) => <ActionButton key={entry.id} label={entry.name} onPress={() => setSelected(entry.id)} />)}
     </Screen>
   );

@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <link rel="icon" type="image/png" href="assets/icone-delicado.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="referrer" content="no-referrer">
+  <meta name="theme-color" content="#FAF9FC">
+  <title>Catálogo de decoração | Delicado Pro</title>
+  <link rel="stylesheet" href="site.css">
+  <link rel="stylesheet" href="catalogo.css">
+  <script defer src="supabase.js"></script>
+  <script defer src="orcamento-config.js"></script>
+  <script type="module" src="catalogo.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#conteudo">Ir para o conteúdo</a>
+  <header class="site-header">
+    <div class="wrap header-content">
+      <a class="wordmark" href="./">Delicado <span>Pro</span></a>
+      <nav class="site-nav" aria-label="Navegação principal">
+        <a href="./">Início</a>
+        <a href="./#decoracao">Decoração</a>
+        <a href="catalogo.html" aria-current="page">Catálogo</a>
+        <a href="sobre.html">Sobre</a>
+        <a href="contato.html">Contato</a>
+        <a class="nav-cta" href="orcamento.html">Orçamento</a>
+      </nav>
+    </div>
+  </header>
+  <main class="wrap catalog" id="conteudo" tabindex="-1">
+    <header class="catalog-intro">
+      <p class="eyebrow">Etapa 2 de 3 · Materiais</p>
+      <h1>Escolha a decoração</h1>
+      <p>Adicione os materiais e ajuste as quantidades antes de continuar.</p>
+    </header>
+    <div class="catalog-layout" id="catalog" hidden>
+      <section aria-label="Materiais do catálogo">
+        <form id="catalog-search" class="catalog-search surface">
+          <label class="field">Buscar item <input type="search" name="query" maxlength="80" placeholder="Ex.: painel, balão ou fita"></label>
+          <label class="field">Categoria
+            <select name="kind">
+              <option value="">Todas</option><option value="balloon">Balões</option>
+              <option value="asset">Acervo</option><option value="material">Materiais complementares</option>
+            </select>
+          </label>
+          <button class="button outlined">Buscar</button>
+        </form>
+        <p class="feedback catalog-message" id="catalog-status" role="status"></p>
+        <div class="catalog-grid" id="catalog-items"></div>
+        <div class="catalog-pages">
+          <button type="button" class="button outlined" id="previous" hidden>Anterior</button>
+          <button type="button" class="button outlined" id="next" hidden>Próxima</button>
+        </div>
+      </section>
+      <aside class="basket surface" id="catalog-basket" aria-labelledby="basket-title">
+        <h2 id="basket-title" tabindex="-1">Sua seleção</h2>
+        <p id="basket-empty">Os itens adicionados aparecem aqui.</p>
+        <ul id="basket-items"></ul>
+        <p class="feedback" id="basket-status" role="status" data-state="error"></p>
+        <button id="save-selection" type="button" class="button" disabled>Revisar orçamento</button>
+      </aside>
+      <div class="basket-shortcut" aria-label="Atalhos da seleção">
+        <button type="button" id="show-selection" class="button outlined">Sua seleção (0)</button>
+        <button type="button" id="review-selection" class="button" disabled>Revisar orçamento</button>
+      </div>
+      <p class="visually-hidden" id="selection-announcement" role="status"></p>
+    </div>
+    <p class="feedback" id="catalog-access" role="status" data-state="loading">Verificando seu acesso…</p>
+    <noscript><p>Ative o JavaScript para consultar o catálogo.</p></noscript>
+  </main>
+</body>
+</html>

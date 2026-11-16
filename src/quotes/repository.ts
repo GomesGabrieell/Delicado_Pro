@@ -1,13 +1,14 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { randomUUID } from 'expo-crypto';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import { launchImageLibraryAsync } from 'expo-image-picker';
 
 import type { CompositionLine } from '../calculator/repository';
 import { readPhoto, releasePhoto } from '../services/localPhoto';
+import { randomUUID } from '../services/randomUUID';
 
 export const statuses = { draft: 'Rascunho', ready: 'Pronto para revisão', archived: 'Arquivado' } as const;
 export type Status = keyof typeof statuses;
+export type QuoteFilter = Status | 'pending' | '';
 export type QuoteFields = { title: string; client_id: string | null; event_date: string | null; location: string; decoration: string; payment_terms: string };
 export type Quote = QuoteFields & {
   id: string; code: string; status: Status; updated_at: string;
@@ -43,13 +44,70 @@ export function quoteError(error: unknown) {
   return 'Não foi possível concluir a operação. Tente novamente.';
 }
 
-export async function listQuotes(client: SupabaseClient, company: string, query: string, status: Status | '', offset: number) {
+const pendingStatuses = ['draft', 'ready'] as const;
+const summaryColumns = 'id,code,title,status,event_date,location';
+export type QuoteSummary = Pick<Quote, 'id' | 'code' | 'title' | 'status' | 'event_date' | 'location'>;
+
+export async function listQuotes(client: SupabaseClient, company: string, query: string, status: QuoteFilter, offset: number) {
   let request = client.from('quotes').select(columns).eq('company_id', company);
-  if (status) request = request.eq('status', status);
+  if (status === 'pending') request = request.in('status', pendingStatuses);
+  else if (status) request = request.eq('status', status);
   const search = query.trim().replace(/[^\p{L}\p{N} -]/gu, ' ').trim();
   if (search) request = request.or(`title.ilike.*${search}*,code.ilike.*${search}*,location.ilike.*${search}*`);
   const { data, error } = await request.order('updated_at', { ascending: false }).order('id')
     .range(offset, offset + quotePage).returns<Quote[]>();
+  if (error) throw error;
+  return data;
+}
+
+export async function listPendingQuotes(client: SupabaseClient, company: string) {
+  const { data, error } = await client.from('quotes').select(summaryColumns)
+    .eq('company_id', company).in('status', pendingStatuses)
+    .order('updated_at', { ascending: false }).order('id').limit(3).returns<QuoteSummary[]>();
+  if (error) throw error;
+  return data;
+}
+
+export async function listUpcomingEvents(client: SupabaseClient, company: string, limit: number, offset = 0, onDate?: string) {
+  const today = new Date();
+  const date = [today.getFullYear(), today.getMonth() + 1, today.getDate()]
+    .map((part) => String(part).padStart(2, '0')).join('-');
+  const query = client.from('quotes').select(summaryColumns).eq('company_id', company).in('status', pendingStatuses);
+  const { data, error } = await (onDate ? query.eq('event_date', onDate) : query.gte('event_date', date))
+    .order('event_date').order('id').range(offset, offset + limit - 1).returns<QuoteSummary[]>();
+  if (error) throw error;
+  return data;
+}
+
+export async function listCalendarEvents(client: SupabaseClient, company: string, firstDay: string, lastDay: string) {
+  const pageSize = 100;
+  const events: QuoteSummary[] = [];
+
+  for (let offset = 0; ; offset += pageSize) {
+    const { data, error } = await client.from('quotes').select(summaryColumns)
+      .eq('company_id', company).in('status', pendingStatuses)
+      .gte('event_date', firstDay).lte('event_date', lastDay)
+      .order('event_date').order('id').range(offset, offset + pageSize - 1).returns<QuoteSummary[]>();
+    if (error) throw error;
+    events.push(...data);
+    if (data.length < pageSize) return events;
+  }
+}
+
+export async function countQuotesByStatus(client: SupabaseClient, company: string) {
+  return Promise.all((Object.keys(statuses) as Status[]).map(async (status) => {
+    const { count, error } = await client.from('quotes').select('id', { count: 'exact', head: true })
+      .eq('company_id', company).eq('status', status);
+    if (error) throw error;
+    if (count === null) throw new Error('A contagem de orçamentos está indisponível.');
+    return { status, count };
+  }));
+}
+
+export async function latestQuoteFinancial(client: SupabaseClient, company: string) {
+  const { data, error } = await client.from('quote_financials').select('quote_id,snapshot')
+    .eq('company_id', company).order('captured_at', { ascending: false }).order('quote_id')
+    .limit(1).returns<{ quote_id: string; snapshot: Snapshot }[]>();
   if (error) throw error;
   return data;
 }
@@ -129,13 +187,16 @@ export async function loadQuote(client: SupabaseClient, company: string, id: str
 }
 
 export async function loadQuoteDetails(client: SupabaseClient, company: string, id: string, financial: boolean) {
-  const [data, history, images] = await Promise.all([
+  const [data, history, images, origin] = await Promise.all([
     loadQuote(client, company, id, financial),
     listQuoteHistory(client, company, id),
     client.from('quote_images').select('path').eq('company_id', company).eq('quote_id', id).returns<{ path: string }[]>(),
+    client.from('quotes').select('source_request_id').eq('company_id', company).eq('id', id)
+      .maybeSingle<{ source_request_id: string | null }>(),
   ]);
   if (images.error) throw images.error;
-  return { ...data, history, images: images.data };
+  if (origin.error && origin.error.code !== '42703') throw origin.error;
+  return { ...data, history, images: images.data, sourceRequest: origin.data?.source_request_id };
 }
 
 export async function imageUrl(client: SupabaseClient, path: string) {

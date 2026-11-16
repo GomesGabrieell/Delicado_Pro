@@ -76,8 +76,9 @@ select lives_ok($$select public.set_company_member(
 set local request.jwt.claim.sub = '11000000-0000-0000-0000-000000000002';
 select results_eq('select name from public.companies order by name',
   array['Empresa B de teste'], 'Revogação retira acesso à A e preserva B');
+set local request.jwt.claim.sub = '11000000-0000-0000-0000-000000000001';
 select lives_ok($$select public.create_company('Empresa própria de teste')$$,
-  'Criação de empresa e vínculo inicial é permitida');
+  'Proprietário ativo pode criar empresa adicional');
 select results_eq($$
   select member.role::text
   from public.company_members as member

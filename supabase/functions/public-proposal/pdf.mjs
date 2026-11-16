@@ -45,6 +45,10 @@ export function proposalPdf(proposal, images = []) {
   section('PREPARADO PARA', c.customer);
   if (c.eventDate) section('EVENTO', c.eventDate.split('-').reverse().join('/') + '  |  ' + c.location);
   section('DECORAÇÃO', c.decoration);
+  if (c.materials?.length) {
+    section('MATERIAIS E QUANTIDADES', c.materials.map((item) =>
+      [item.name, [item.quantity, item.unit].filter(Boolean).join(' ')].join(' - ')).join('\n'));
+  }
   section('VALOR TOTAL', formatTotal(c.total));
   section('CONDIÇÕES DE PAGAMENTO', c.payment);
   section('VÁLIDA ATÉ', date.format(new Date(proposal.expiresAt)) + ' (horário de Brasília)');

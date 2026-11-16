@@ -194,8 +194,9 @@ export function FinancialSteps({ client, companyId, lines, step, hasMissingItems
           </> : <Field label="Acréscimo específico (%)" value={override} decimal onChangeText={setOverride} />}
         </View>
       )}
-      {step === financialSteps[4] && (
+      {(step === financialSteps[4] || step === 'Resumo') && (
         <View style={styles.card}>
+          <Text style={styles.title}>Desconto do orçamento</Text>
           <View style={styles.row}>
             <Chip label="Em reais" active={discountMode === 'fixed'} onPress={() => { setDiscountMode('fixed'); setDiscount(''); }} />
             <Chip label="Percentual" active={discountMode === 'percent'} onPress={() => { setDiscountMode('percent'); setDiscount(''); }} />

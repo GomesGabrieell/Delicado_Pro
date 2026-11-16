@@ -2,53 +2,170 @@
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8">
+  <link rel="icon" type="image/png" href="assets/icone-delicado.png">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="robots" content="noindex,nofollow,noarchive">
   <meta name="referrer" content="no-referrer">
-  <title>Proposta comercial</title>
-  <link rel="stylesheet" href="proposal.css">
-  <script type="module" src="proposal.js"></script>
+  <meta name="description" content="Decoração para casamentos, noivados, aniversários e comemorações. Explore inspirações e solicite um orçamento personalizado com o Delicado Pro.">
+  <meta name="theme-color" content="#FAF9FC">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="pt_BR">
+  <meta property="og:title" content="Delicado Pro | Decoração de eventos">
+  <meta property="og:description" content="Conheça nossas opções de decoração, explore inspirações e solicite seu orçamento.">
+  <title>Delicado Pro | Decoração para casamentos e comemorações</title>
+  <script src="entrada.js"></script>
+  <link rel="stylesheet" href="site.css">
+  <link rel="stylesheet" href="home.css">
+  <script defer src="home.js"></script>
 </head>
 <body>
-  <main>
-    <p id="notice" role="status">Carregando proposta…</p>
-    <article id="proposal" hidden>
-      <header>
-        <p id="company"></p>
-        <h1 id="title"></h1>
-        <p id="code"></p>
-      </header>
-      <div class="body">
-        <p class="label">Preparado para</p>
-        <h2 id="customer"></h2>
-        <p id="event"></p>
-        <h2>Decoração</h2>
-        <p id="decoration" class="multiline"></p>
-        <section id="references" hidden><h2>Referências</h2><div id="images"></div></section>
-        <section class="price">
-          <p class="label">Valor total</p><strong id="total"></strong>
-          <p id="payment" class="multiline"></p>
-          <p id="expiry"></p>
-        </section>
-        <section aria-labelledby="responseTitle">
-          <h2 id="responseTitle">Sua resposta</h2>
-          <p id="response" role="status"></p>
-          <div id="actions">
-            <button data-choice="approved">Aprovar</button>
-            <button data-choice="negotiate" class="secondary">Negociar</button>
-            <button id="decline" class="secondary">Não aprovar</button>
-          </div>
-          <div id="revision" hidden>
-            <p>Você deseja receber uma nova proposta?</p>
-            <button data-choice="declined" data-revision="yes">Sim, quero receber</button>
-            <button data-choice="declined" data-revision="no" class="secondary">Não, obrigado</button>
-            <button id="cancel" class="secondary">Voltar</button>
-          </div>
-          <a id="whatsapp" class="button" hidden rel="noreferrer noopener" target="_blank">Conversar no WhatsApp</a>
-        </section>
-        <button id="pdf" class="secondary">Baixar PDF</button>
+  <a class="skip-link" href="#conteudo">Ir para o conteúdo</a>
+  <header class="site-header home-header">
+    <div class="wrap home-header-inner">
+      <a class="wordmark" href="./">Delicado <span>Pro</span></a>
+      <button class="button outlined home-menu-toggle" type="button" aria-controls="navegacao-home" aria-expanded="false" hidden>
+        Menu <span class="menu-icon" aria-hidden="true"></span>
+      </button>
+      <nav class="home-nav" id="navegacao-home" aria-label="Navegação principal">
+        <div class="home-nav-links">
+          <a href="./" aria-current="page">Início</a>
+          <a href="#decoracao">Decorações</a>
+          <a href="catalogo.html">Catálogo</a>
+          <a href="sobre.html">Sobre</a>
+          <a href="contato.html">Contato</a>
+        </div>
+        <a class="button" href="orcamento.html">Solicitar orçamento <span aria-hidden="true">↗</span></a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="conteudo" tabindex="-1">
+    <section class="wrap home-hero" aria-labelledby="hero-title">
+      <div class="home-hero-copy">
+        <p class="eyebrow">Decoração de eventos</p>
+        <h1 id="hero-title">Decoração que celebra <em>a sua história.</em></h1>
+        <p class="lead">Arranjos, mesas e cenários pensados para o seu casamento, aniversário ou comemoração.</p>
+        <div class="home-actions">
+          <a class="button" href="orcamento.html">Solicitar orçamento <span aria-hidden="true">↗</span></a>
+          <a class="button outlined" href="#decoracao">Conhecer decorações</a>
+        </div>
       </div>
-    </article>
+      <figure class="home-hero-photo">
+        <picture>
+          <source media="(width < 43rem)" srcset="assets/recepcao-ilustrativa-640.webp">
+          <img src="assets/recepcao-ilustrativa.webp"
+            srcset="assets/recepcao-ilustrativa-640.webp 640w, assets/recepcao-ilustrativa.webp 1280w"
+            sizes="46vw" width="1280" height="1600" fetchpriority="high"
+            alt="Recepção à luz de velas com mesa comprida, arranjos em lilás e cortinas claras">
+        </picture>
+        <figcaption class="photo-label">Imagem ilustrativa</figcaption>
+      </figure>
+    </section>
+
+    <section class="wrap home-section" id="decoracao" aria-labelledby="event-title" tabindex="-1">
+      <div class="home-section-header">
+        <h2 id="event-title">Decoração para o seu evento</h2>
+        <p class="image-note">Imagens ilustrativas</p>
+      </div>
+      <div class="event-grid">
+        <article class="event-card surface">
+          <img src="assets/casamento-768.webp" width="768" height="512" loading="lazy" decoding="async"
+            alt="Mesa em jardim com arranjos florais, velas e taças">
+          <div class="event-card-copy">
+            <h3>Casamentos e noivados</h3>
+            <p>Arranjos florais, mesas dos convidados e cenários para cerimônia ou recepção.</p>
+            <a class="home-text-link" href="orcamento.html?evento=casamento">Pedir orçamento de casamento <span aria-hidden="true">↗</span></a>
+          </div>
+        </article>
+        <article class="event-card surface">
+          <img src="assets/celebracao-768.webp" width="768" height="512" loading="lazy" decoding="async"
+            alt="Painel em arco com balões em azul acinzentado e tons de creme">
+          <div class="event-card-copy">
+            <h3>Aniversários e comemorações</h3>
+            <p>Balões, painéis e mesa principal para celebrar com a família e os amigos.</p>
+            <a class="home-text-link" href="orcamento.html?evento=aniversario">Pedir orçamento de aniversário <span aria-hidden="true">↗</span></a>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="home-gallery home-section" aria-labelledby="gallery-title">
+      <div class="wrap">
+        <div class="home-section-header">
+          <div>
+            <h2 id="gallery-title">Galeria de inspirações</h2>
+            <p class="lead">Explore combinações de flores, cores e texturas para o seu evento.</p>
+          </div>
+          <p class="image-note">Referências ilustrativas</p>
+        </div>
+        <div class="gallery-grid">
+          <figure class="gallery-feature">
+            <img src="assets/mesa-floral-ilustrativa.webp" width="768" height="512" loading="lazy" decoding="async"
+              alt="Arranjo em lilás e rosa com velas finas sobre toalha de linho">
+            <figcaption>Flores e velas à mesa</figcaption>
+          </figure>
+          <figure>
+            <img src="assets/recepcao-ilustrativa-640.webp" width="640" height="800" loading="lazy" decoding="async"
+              alt="Mesa de recepção com arranjos florais e iluminação acolhedora">
+            <figcaption>Recepção à luz de velas</figcaption>
+          </figure>
+          <figure>
+            <img src="assets/celebracao-768.webp" width="768" height="512" loading="lazy" decoding="async"
+              alt="Balões em tons suaves em volta de um painel neutro">
+            <figcaption>Balões em tons suaves</figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <section class="wrap home-section" aria-labelledby="process-title">
+      <div class="home-section-header">
+        <h2 id="process-title">Como funciona</h2>
+      </div>
+      <ol class="process-list" role="list">
+        <li>
+          <h3>Conte sobre seu evento</h3>
+          <p>Informe o tipo de celebração, a data prevista e o local.</p>
+        </li>
+        <li>
+          <h3>Escolha suas inspirações</h3>
+          <p>Explore as referências e selecione no catálogo os materiais que combinam com a sua ideia.</p>
+        </li>
+        <li>
+          <h3>Receba uma proposta personalizada</h3>
+          <p>Depois de analisar o pedido, a equipe pode entrar em contato com uma proposta para o seu evento.</p>
+        </li>
+      </ol>
+    </section>
+
+    <section class="wrap home-section home-final" aria-labelledby="final-title">
+      <div class="final-content">
+        <div>
+          <h2 id="final-title">Vamos planejar a sua decoração?</h2>
+          <p>Conte à equipe o que você imagina para a sua celebração.</p>
+        </div>
+        <a class="button" href="orcamento.html">Solicitar orçamento <span aria-hidden="true">↗</span></a>
+      </div>
+    </section>
   </main>
+
+  <footer class="site-footer home-footer">
+    <div class="wrap home-footer-inner">
+      <div>
+        <a class="wordmark" href="./">Delicado <span>Pro</span></a>
+        <p>Decoração de eventos</p>
+      </div>
+      <nav aria-label="Links do rodapé">
+        <a href="#decoracao">Decorações</a>
+        <a href="catalogo.html">Catálogo</a>
+        <a href="sobre.html">Sobre</a>
+        <a href="contato.html">Contato</a>
+        <a href="/login">Portal de acesso</a>
+      </nav>
+      <div class="home-footer-contact">
+        <p>Atendimento</p>
+        <a class="home-text-link" href="orcamento.html">Formulário de orçamento <span aria-hidden="true">↗</span></a>
+      </div>
+    </div>
+  </footer>
 </body>
 </html>

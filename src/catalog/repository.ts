@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { randomUUID } from 'expo-crypto';
 import { readPhoto } from '../services/localPhoto';
+import { randomUUID } from '../services/randomUUID';
 
 import type { Category, Company, Item, Kind, Ownership, Payload } from './model';
 
@@ -32,6 +32,9 @@ export async function listCompanies(client: SupabaseClient, userId: string) {
   const { data, error } = await client.from('company_members')
     .select('role, company:companies!inner(id, name)').eq('user_id', userId).eq('status', 'active')
     .overrideTypes<{ role: Company['role']; company: Pick<Company, 'id' | 'name'> }[], { merge: false }>();
+  if (error?.code === 'PGRST205' || error?.code === '42P01') {
+    throw new Error('O banco de dados das empresas ainda precisa ser configurado. Os módulos ficam disponíveis após essa configuração.');
+  }
   if (error) throw error;
   return data.map(({ company, role }) => ({ ...company, role })).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
 }

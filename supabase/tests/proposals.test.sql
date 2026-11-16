@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
-select plan(24);
+select plan(26);
 
 insert into auth.users(id,email) values
  ('11000000-0000-0000-0000-000000000061','owner-proposal@example.test'),
@@ -15,9 +15,10 @@ insert into public.company_members(company_id,user_id,role,status) values
  ('22000000-0000-0000-0000-000000000062','11000000-0000-0000-0000-000000000063','owner','active');
 insert into public.quote_clients(id,company_id,name,notes) values
  ('33000000-0000-0000-0000-000000000061','22000000-0000-0000-0000-000000000061','Cliente','Privado');
-insert into public.quotes(id,company_id,client_id,title,event_date,location,decoration,payment_terms,status) values
+insert into public.quotes(id,company_id,client_id,title,event_date,location,decoration,payment_terms,status,items) values
  ('44000000-0000-0000-0000-000000000061','22000000-0000-0000-0000-000000000061','33000000-0000-0000-0000-000000000061',
-  'Evento','2027-01-01','Salão','Decoração','Entrada e saldo','ready');
+  'Evento','2027-01-01','Salão','Decoração','Entrada e saldo','ready',
+  '[{"id":"interno","name":"Painel","quantity":"2","unit":"un","unitCost":1000}]');
 insert into public.quote_financials values
  ('44000000-0000-0000-0000-000000000061','22000000-0000-0000-0000-000000000061',
   '{"sale":"12500","totalCost":"9000","profit":"3500","margin":"2800"}',now());
@@ -32,6 +33,9 @@ select matches(current_setting('test.proposal_token'),'^[a-f0-9]{64}$','Emissão
 select is((select expires_at - sent_at from public.commercial_proposals), interval '48 hours','Validade de dois dias corridos');
 select is((select content->>'total' from public.commercial_proposals),'12500','Proposta usa preço registrado no orçamento');
 select ok((select not (content ?| array['totalCost','profit','margin','notes']) from public.commercial_proposals),'Snapshot exclui dados privados');
+select is((select content#>>'{materials,0,quantity}' from public.commercial_proposals),'2','Proposta congela a quantidade');
+select ok((select not ((content#>'{materials,0}') ?| array['id','unitCost']) from public.commercial_proposals),
+  'Material público não inclui identificador interno ou custo');
 select throws_ok('select token_hash from public.commercial_proposals','42501',null,'Administrador não lê hashes');
 select throws_ok($$select public.read_public_proposal(current_setting('test.proposal_token'))$$,'42501',null,'RPC pública só pode ser chamada pelo backend');
 

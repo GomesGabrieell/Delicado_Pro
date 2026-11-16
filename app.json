@@ -4,6 +4,7 @@
     "slug": "delicado-pro",
     "scheme": "delicado-pro",
     "version": "0.1.0",
+    "icon": "./public-proposal/assets/icone-delicado.png",
     "platforms": [
       "android",
       "ios",
@@ -15,7 +16,14 @@
       "bundleIdentifier": "com.delicadopro.app"
     },
     "android": {
-      "package": "com.delicadopro.app"
+      "package": "com.delicadopro.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icone-adaptativo.png",
+        "backgroundColor": "#5142D5"
+      }
+    },
+    "web": {
+      "favicon": "./public-proposal/assets/icone-delicado.png"
     },
     "plugins": [
       "expo-router",

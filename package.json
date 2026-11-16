@@ -8,6 +8,7 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "typecheck": "tsc --noEmit",
+    "portal:build": "expo export --platform web",
     "lint": "expo lint",
     "test:calculator": "node --test tests/calculator.test.mjs"
   },

@@ -1,22 +1,28 @@
 import { createClient } from '@supabase/supabase-js';
 import { proposalPdf } from './pdf.mjs';
 
-const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', key);
-const origin = Deno.env.get('PROPOSAL_WEB_ORIGIN') ?? '';
+const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+const url = Deno.env.get('SUPABASE_URL');
+const supabase = url && key ? createClient(url, key, {
+  auth: { persistSession: false, autoRefreshToken: false },
+}) : null;
+const allowedOrigins = new Set((Deno.env.get('PROPOSAL_WEB_ORIGIN') ?? '')
+  .split(',').map((value) => value.trim()).filter(Boolean));
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get('origin');
   const headers = new Headers({
     'Cache-Control': 'private, no-store',
     'Referrer-Policy': 'no-referrer',
     'X-Content-Type-Options': 'nosniff',
-    'Access-Control-Allow-Origin': origin,
-    'Access-Control-Allow-Headers': 'content-type',
+    'Access-Control-Allow-Headers': 'content-type, authorization',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Vary': 'Origin',
   });
   const json = (value: unknown, status = 200) => Response.json(value, { status, headers });
-  if (req.headers.get('origin') && req.headers.get('origin') !== origin) return json({ error: 'Origem inválida.' }, 403);
+  if (origin && !allowedOrigins.has(origin)) return json({ error: 'Origem inválida.' }, 403);
+  if (origin) headers.set('Access-Control-Allow-Origin', origin);
+  if (!supabase || !allowedOrigins.size) return json({ error: 'Portal indisponível no momento.' }, 503);
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers });
   if (req.method !== 'POST') return json({ error: 'Método inválido.' }, 405);
 
@@ -38,8 +44,10 @@ Deno.serve(async (req) => {
       body += decoder.decode(value, { stream: true });
     }
     const input = JSON.parse(body + decoder.decode());
-    if (!input || typeof input.token !== 'string' || !/^[0-9a-f]{64}$/.test(input.token)
-      || !['read','respond','pdf'].includes(input.action)) return json({ error: 'Requisição inválida.' }, 400);
+    if (!input || !['read','respond','pdf','customer_pdf'].includes(input.action)
+      || (input.action !== 'customer_pdf' && (typeof input.token !== 'string' || !/^[0-9a-f]{64}$/.test(input.token)))) {
+      return json({ error: 'Requisição inválida.' }, 400);
+    }
     if (input.action === 'respond') {
       if (typeof input.decision !== 'string' || (input.wantsRevision != null && typeof input.wantsRevision !== 'boolean')) {
         return json({ error: 'Resposta inválida.' }, 400);
@@ -53,7 +61,20 @@ Deno.serve(async (req) => {
       return data ? json(data) : json({ error: 'Proposta indisponível ou expirada.' }, 404);
     }
 
-    const { data, error } = await supabase.rpc('read_public_proposal', { p_token: input.token });
+    let source;
+    if (input.action === 'customer_pdf') {
+      const bearer = req.headers.get('authorization')?.match(/^Bearer (\S+)$/i)?.[1];
+      if (!bearer) return json({ error: 'Sessão necessária.' }, 401);
+      if (typeof input.proposalId !== 'string' || !/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(input.proposalId)) {
+        return json({ error: 'Requisição inválida.' }, 400);
+      }
+      const { data: auth, error: authError } = await supabase.auth.getUser(bearer);
+      if (authError || !auth.user || auth.user.is_anonymous) return json({ error: 'Sessão inválida.' }, 401);
+      source = await supabase.rpc('customer_proposal_pdf_source', { p_user: auth.user.id, p_proposal: input.proposalId });
+    } else {
+      source = await supabase.rpc('read_public_proposal', { p_token: input.token });
+    }
+    const { data, error } = source;
     if (error) throw error;
     if (!data) return json({ error: 'Proposta indisponível ou expirada.' }, 404);
     const { paths, ...proposal } = data;

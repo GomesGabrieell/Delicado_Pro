@@ -1,5 +1,6 @@
 import 'react-native-url-polyfill/auto';
 import { createClient, processLock } from '@supabase/supabase-js';
+import { Platform } from 'react-native';
 
 import { sessionStorage } from './sessionStorage';
 
@@ -27,7 +28,9 @@ export const supabase =
           autoRefreshToken: true,
           persistSession: true,
           detectSessionInUrl: false,
-          lock: processLock,
+          ...(Platform.OS === 'web'
+            ? { storageKey: 'delicado-portal-session', flowType: 'pkce' as const }
+            : { lock: processLock }),
         },
       })
     : null;

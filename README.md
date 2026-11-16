@@ -172,7 +172,39 @@ Execute `node --test tests/clients.test.mjs` para testar as validações locais 
 
 ## Propostas comerciais
 
+### Site comercial e pedidos de orçamento
+
+Na raiz do projeto, execute `node public-proposal/serve.mjs` e abra
+[o site comercial local](http://127.0.0.1:8786/). O servidor lê a URL e a chave publicável do Supabase do `.env`.
+
+Para habilitar o botão da tela **Contato** no aplicativo, preencha `EXPO_PUBLIC_CONTACT_PAGE_URL` com a URL completa da página `contato.html` do site comercial e gere um novo bundle.
+
+1. Abra **Solicitar orçamento**, entre com uma conta de e-mail confirmado e preencha os dados do evento.
+   Em **Continuar para o catálogo**, selecione os itens, ajuste as quantidades e volte para revisar o pedido.
+   Para cadastro e recuperação de senha, permita `http://127.0.0.1:8786/orcamento.html` no Supabase Auth.
+   Abra o e-mail no mesmo navegador e na mesma origem em que iniciou o fluxo para concluir o PKCE.
+2. Após revisão e aplicação autorizada das migrações `20261116000100_solicitacoes_site.sql` e
+   `20261116000200_catalogo_site.sql`, cadastre em
+   `private.website_portals` o slug `delicado-pro` e o UUID da empresa receptora. Use `DELICADO_PORTAL_SLUG`
+   no ambiente local se o slug cadastrado for outro.
+3. No app, com uma conta proprietária ativa dessa empresa, abra **Orçamentos → Pedidos do site**.
+   Abra o pedido, confira os dados e use **Criar orçamento** para abrir um rascunho vinculado ao cliente.
+
+O formulário usa o e-mail confirmado do usuário e o banco resolve a empresa receptora pelo slug cadastrado.
+Com a migração `20261116001100_cliente_na_solicitacao.sql`, o envio do pedido cria ou reutiliza o cadastro
+em **Clientes** da empresa receptora. A equipe acompanha a solicitação e decide quando criar o orçamento.
+Pedidos anteriores à migração recebem o vínculo quando forem convertidos, caso ainda estejam sem orçamento.
+O catálogo exibe os itens ativos dessa empresa e suas fotos disponíveis. Os custos internos não são enviados ao site.
+Somente proprietários ativos da empresa podem consultar e administrar os pedidos.
+Uma tentativa sem confirmação permanece no rascunho, com a mesma chave e o mesmo conteúdo para confirmar o envio.
+A migração `20261116000300_restringir_envio_legado_site.sql` restringe a chamada direta da função antiga.
+Antes de aplicar, confira se integrações externas ainda a chamam e execute `supabase/tests/website_requests.test.sql`
+em uma instância de teste com as migrações aplicadas. O teste usa uma transação revertida ao final.
+O fluxo de resposta a uma proposta já emitida fica em `proposta.html`. O redirecionamento da página inicial aceita o formato dos links antigos. A consulta depende da Edge Function publicada.
+
 O app React Native emite versões comerciais a partir de **Orçamentos → Propostas comerciais**. A pasta [public-proposal](public-proposal/) é a página independente que o cliente abre no navegador.
+
+O endereço do portal no Sites é `https://delicado-pro-propostas.gabriel-3218.chatgpt.site`. Os dados de cada proposta só são carregados com o link emitido pelo app. Configure `PROPOSAL_WEB_ORIGIN` com esse endereço na Edge Function e, após testar a integração, use o mesmo endereço em `EXPO_PUBLIC_PROPOSAL_PAGE_URL` ao gerar o APK Android.
 
 1. Aplique as migrações pendentes até `20261113000600_propostas.sql` no Supabase de desenvolvimento autorizado. Na CLI vinculada a esse projeto, configure a origem HTTPS da página e publique a Edge Function:
 
@@ -181,7 +213,7 @@ O app React Native emite versões comerciais a partir de **Orçamentos → Propo
    npx supabase functions deploy public-proposal --no-verify-jwt
    ```
 
-   A função valida o token da proposta em cada operação. Use a origem exata da página, sem caminho nem barra final. A chave de serviço fica no ambiente da função.
+   A função valida o token da proposta em cada operação. Use a origem exata da página, sem caminho nem barra final. A chave de serviço fica no ambiente da função. Em um projeto de teste dedicado à prévia local, a origem do site é `http://127.0.0.1:8786`. Uma versão Android de distribuição requer a URL HTTPS da proposta.
 2. Em `public-proposal/config.js`, configure `endpoint` com a URL da função, por exemplo `https://<projeto>.supabase.co/functions/v1/public-proposal`. Sirva apenas a pasta `public-proposal/` em HTTPS e preencha `EXPO_PUBLIC_PROPOSAL_PAGE_URL` no `.env` do app com o endereço completo dessa página. Reinicie o Expo. Para produção, desabilite analytics nessa página e configure `Referrer-Policy: no-referrer` e `X-Robots-Tag: noindex, nofollow, noarchive` no host.
 3. Como administrador ou proprietário, abra um orçamento **Pronto para revisão** com cliente, cálculo, descrição e condições de pagamento. Abra **Propostas comerciais**, salve nome, cor e WhatsApp com DDI em **Identidade comercial** e emita. Copie o link nessa tela e use **Compartilhar pelo WhatsApp** para concluir o envio. A emissão é o registro de envio no sistema e inicia a validade de 48 horas. O WhatsApp exige o envio manual da mensagem.
 4. Abra o link completo em outro navegador sem login. Confira o conteúdo e baixe o PDF. No Android e iPhone, o app também oferece compartilhamento do PDF pela folha do sistema. Valide propostas distintas para **Aprovar**, **Negociar** e **Não aprovar**, incluindo a pergunta sobre nova proposta e a mensagem do WhatsApp.

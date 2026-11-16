@@ -1,7 +1,7 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { CalculatorScreen } from '../calculator/CalculatorScreen';
 import { useRouteSession } from '../navigation/useRouteSession';
-import { backTo, routeId } from '../navigation/routes';
+import { backTo, openQuote, routeId } from '../navigation/routes';
 
 export default function Calculator() {
   const auth = useRouteSession();
@@ -12,6 +12,7 @@ export default function Calculator() {
   return auth && <CalculatorScreen client={auth.client} userId={auth.user.id}
     target={company && quote ? { company, quote } : undefined}
     seed={company && product ? { company, product } : undefined}
+    initialCompany={company}
     onQuoteSaved={() => backTo('/orcamentos')}
-    onOpenQuote={(company, quoteId) => router.push({ pathname: '/orcamentos', params: { company, quoteId } })} />;
+    onOpenQuote={openQuote} />;
 }

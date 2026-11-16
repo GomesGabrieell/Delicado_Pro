@@ -1,14 +1,13 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { useState } from 'react';
-import { StyleSheet, Text } from 'react-native';
 
-import { ActionButton } from '../components/ActionButton';
 import { Screen } from '../components/Screen';
-import { colors } from '../theme';
+import { ConfirmDialog, SecondaryButton } from '../design-system';
 
-export function AccountScreen({ client, email, openSettings }: { client: SupabaseClient; email?: string; openSettings: () => void }) {
+export function AccountScreen({ client, email }: { client: SupabaseClient; email?: string }) {
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [confirming, setConfirming] = useState(false);
 
   async function signOut() {
     setBusy(true);
@@ -26,21 +25,11 @@ export function AccountScreen({ client, email, openSettings }: { client: Supabas
 
   return (
     <Screen title="Sua conta" description={email}>
-      {failed && (
-        <Text accessibilityRole="alert" style={styles.error}>
-          Não foi possível sair. Tente novamente.
-        </Text>
-      )}
-      <ActionButton
-        disabled={busy}
-        label={busy ? 'Saindo…' : 'Sair'}
-        onPress={() => void signOut()}
-      />
-      <ActionButton label="Configurações" onPress={openSettings} disabled={busy} />
+      <SecondaryButton label="Sair da conta" icon="log-out" onPress={() => { setFailed(false); setConfirming(true); }} />
+      <ConfirmDialog visible={confirming} title="Sair da conta?"
+        description="Sua sessão será encerrada neste dispositivo." confirmLabel="Sair" destructive loading={busy}
+        error={failed ? 'Não foi possível sair. Tente novamente.' : undefined}
+        onClose={() => { setConfirming(false); setFailed(false); }} onConfirm={() => void signOut()} />
     </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  error: { color: colors.error, fontSize: 16 },
-});

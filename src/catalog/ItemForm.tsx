@@ -1,5 +1,4 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { randomUUID } from 'expo-crypto';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useState } from 'react';
@@ -12,6 +11,7 @@ import { groups, makeDraft, money, packageValues, validateDraft } from './model'
 import type { Category, Company, Draft, Item, Kind } from './model';
 import { catalogError, createCategory, getPhotoUrl, saveItem } from './repository';
 import { readPhoto, releasePhoto } from '../services/localPhoto';
+import { randomUUID } from '../services/randomUUID';
 
 export function ItemForm({ client, company, kind, item, categories, onCategory, onSaved, onCancel }: {
   client: SupabaseClient; company: Company; kind: Kind; item?: Item; categories: Category[];
@@ -20,6 +20,7 @@ export function ItemForm({ client, company, kind, item, categories, onCategory, 
   const [draft, setDraft] = useState(() => makeDraft(item));
   const [itemId] = useState(() => item?.id ?? randomUUID());
   const [categoryName, setCategoryName] = useState('');
+  const [addingCategory, setAddingCategory] = useState(false);
   const [photoUri, setPhotoUri] = useState<string | null>();
   const [savedPhoto, setSavedPhoto] = useState<string>();
   const [busy, setBusy] = useState(false);
@@ -86,6 +87,7 @@ export function ItemForm({ client, company, kind, item, categories, onCategory, 
       onCategory(category);
       setField('category_id', category.id);
       setCategoryName('');
+      setAddingCategory(false);
     } catch (cause) {
       setError(catalogError(cause));
     } finally {
@@ -111,7 +113,7 @@ export function ItemForm({ client, company, kind, item, categories, onCategory, 
   return (
     <Screen title={item ? 'Editar item' : 'Novo item'} description={groups[kind]}>
       <View style={styles.card}>
-        {field('name', 'Nome', 120)}
+        {field('name', 'Nome do item', 120)}
         {kind === 'balloon' ? (
           <>
             {field('brand', 'Marca', 80)}
@@ -130,8 +132,15 @@ export function ItemForm({ client, company, kind, item, categories, onCategory, 
                   disabled={busy} onPress={() => setField('category_id', category.id)} />
               ))}
             </View>
-            <Field label="Nova categoria" value={categoryName} onChangeText={setCategoryName} maxLength={80} disabled={busy} />
-            <Chip label="Criar categoria" disabled={busy || !categoryName.trim()} onPress={() => void addCategory()} />
+            {addingCategory || categories.length === 0 ? <>
+              <Field label="Nome da categoria" value={categoryName} onChangeText={setCategoryName} maxLength={80} disabled={busy} />
+              <View style={styles.row}>
+                <Chip label="Criar categoria" disabled={busy || !categoryName.trim()} onPress={() => void addCategory()} />
+                {categories.length > 0 && <Chip label="Cancelar nova categoria" disabled={busy} onPress={() => setAddingCategory(false)} />}
+              </View>
+            </> : <View style={styles.row}>
+              <Chip label="Nova categoria" disabled={busy} onPress={() => setAddingCategory(true)} />
+            </View>}
           </>
         )}
         {kind === 'asset' && (
@@ -140,8 +149,9 @@ export function ItemForm({ client, company, kind, item, categories, onCategory, 
               <Chip label="Próprio" active={draft.ownership === 'owned'} disabled={busy} onPress={() => setField('ownership', 'owned')} />
               <Chip label="Alugado" active={draft.ownership === 'rented'} disabled={busy} onPress={() => setField('ownership', 'rented')} />
             </View>
+            <Text style={styles.title}>Valores</Text>
             {field('rental_cost', 'Custo de locação (R$)', 13, true)}
-            {field('markup_percent', 'Acréscimo (%)', 8, true)}
+            {field('markup_percent', 'Acréscimo sobre o custo (%)', 8, true)}
           </>
         )}
         {kind === 'material' && (

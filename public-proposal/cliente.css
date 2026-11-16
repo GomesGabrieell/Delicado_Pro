@@ -1,0 +1,31 @@
+@layer pages {
+  .portal-header, .portal-account, .portal-nav, .portal-actions { display: flex; align-items: center; gap: var(--space-3) var(--space-4); flex-wrap: wrap; }
+  .portal-header { min-height: var(--space-16); justify-content: space-between; padding-block: var(--space-2); }
+  .portal-area { max-width: 66rem; padding-block: var(--space-5) var(--space-12); }
+  .portal-nav { margin-bottom: var(--space-5); padding-bottom: var(--space-3); border-bottom: 1px solid var(--line); }
+  .portal-nav a { display: inline-flex; align-items: center; min-height: var(--tap-size); padding-inline: var(--space-3); text-decoration: none; color: var(--violet); border-radius: var(--radius-pill); }
+  .portal-nav [aria-current="page"], .portal-nav a:hover { background: var(--lavender); }
+  .portal-intro, .portal-card { padding: var(--card-padding); margin-bottom: var(--space-4); }
+  .portal-intro { background: var(--lavender); border-radius: var(--radius-feature); }
+  .portal-intro h1 { margin-block: var(--space-2) var(--space-3); }
+  .portal-intro p:not(.eyebrow), .portal-card p { color: var(--muted); white-space: pre-wrap; overflow-wrap: anywhere; }
+  .portal-intro .button { margin-top: var(--space-4); }
+  .portal-card h2 { font-size: var(--text-card); margin-bottom: var(--space-3); }
+  .portal-card h3 { margin-bottom: var(--space-2); }
+  .portal-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: var(--space-4); }
+  .portal-card form, .portal-filter { display: grid; gap: var(--space-3); }
+  .portal-filter { grid-template-columns: minmax(0,1fr) minmax(0,13rem) auto; align-items: end; }
+  .portal-card ul, .portal-card ol { padding-inline-start: var(--space-5); overflow-wrap: anywhere; }
+  .portal-card a:not(.button), .portal-account a { color: var(--violet); }
+  .portal-card .portal-actions { margin-top: var(--space-3); }
+  .portal-value { font: 400 var(--text-card)/1 var(--font-display); color: var(--ink); }
+  .portal-account { font-size: var(--text-small); }
+  .portal-contact { display: grid; gap: var(--space-4); }
+}
+@layer responsive {
+  @media (width < 43rem) {
+    .portal-grid, .portal-filter { grid-template-columns: minmax(0,1fr); }
+    .portal-nav { gap: var(--space-1); font-size: var(--text-small); }
+    .portal-nav a { padding-inline: var(--space-2); }
+  }
+}

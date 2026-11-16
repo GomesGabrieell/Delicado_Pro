@@ -1,16 +1,27 @@
+import { corners, interaction, palette, space, touchSize, type } from './design-system/tokens';
+
 export const colors = {
-  graphite: '#242A30',
-  white: '#FFFFFF',
-  offWhite: '#F6F5F1',
-  blueGray: '#475E71',
-  muted: '#4F5E68',
-  border: '#B2BEC6',
-  error: '#8C302E',
+  graphite: palette.text,
+  white: palette.background,
+  offWhite: palette.surface,
+  blueGray: palette.accent,
+  muted: palette.muted,
+  border: palette.border,
+  error: palette.danger,
+  divider: palette.divider,
+  selection: palette.accentSurface,
+  pressed: interaction.pressed,
 };
 
 export const spacing = {
-  small: 8,
-  medium: 16,
-  large: 24,
-  extraLarge: 32,
+  tiny: space.xxs,
+  small: space.xs,
+  compact: space.sm,
+  medium: space.md,
+  large: space.lg,
+  extraLarge: space.xl,
 };
+
+export const radius = corners;
+export const touchTarget = touchSize;
+export const typography = { ...type, meta: type.detail };
