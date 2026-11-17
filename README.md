@@ -225,6 +225,8 @@ Execute `npx supabase test db` para validar emissão, segurança e respostas. A 
 
 ## Publicação na Cloudflare Workers
 
+Na origem publicada do portal, salve a rota `/admin` nos favoritos para acessar a área da empresa. O painel pede login quando necessário e exige vínculo ativo. O rodapé do site comercial oferece o link **Meus orçamentos** para o Portal do Cliente.
+
 Com Node.js 24, rode os comandos abaixo a partir da raiz do projeto. O build lê a URL do Supabase e a chave publicável do ambiente ou do `.env`. O Wrangler publica o site comercial, o Portal do Cliente e o Expo Web na mesma origem.
 
 ```powershell
